@@ -11,6 +11,8 @@ protected:
 	int capacity = INITIAL_SIZE;
 	int head = 0;
 	int tail = 0;
+
+	CRITICAL_SECTION criticalSection;
 	
 	void Resize(int newCapacity);
 
