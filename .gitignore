@@ -32,3 +32,11 @@ Project9/*.sln
 Project9/*.opensdf
 Project9/*.sdf
 Project9/*.suo
+
+#debug
+Project9/Debug/
+Project9/Aggregator/Debug/
+Project9/Common/Debug/
+Project9/DataDestination/Debug/
+Project9/DataSource/Debug/
+Project/ipch/
