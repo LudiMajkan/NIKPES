@@ -2,7 +2,8 @@
 
 #include "stdafx.h"
 
-#define INITIAL_SIZE 100
+#define INITIAL_SIZE 4
+#define QUEUE_IS_EMPTY -2147483648
 
 template <class T>
 class ThreadSafeQueue
@@ -44,6 +45,15 @@ public:
 		delete(data);
 	}
 
+	int GetCount()
+	{
+		EnterCriticalSection(&criticalSection);
+		int retVal = count;
+		LeaveCriticalSection(&criticalSection);
+		return retVal;
+		
+	}
+
 	void Enqueue(T newData)
 	{
 		EnterCriticalSection(&criticalSection);
@@ -59,10 +69,14 @@ public:
 		count++;
 		LeaveCriticalSection(&criticalSection);
 	}
+
 	T Dequeue()
 	{
 		T retVal = NULL;
-
+		if (count == 0)
+		{
+			return QUEUE_IS_EMPTY;
+		}
 		if (count > 0)
 		{
 			EnterCriticalSection(&criticalSection);
@@ -75,22 +89,24 @@ public:
 
 			if (head < tail)
 			{
-				if (tail - head + 1 <= capacity / 4)
+				if (count - 1 <= capacity / 4)
 				{
 					Resize(capacity / 2);
 				}
 			}
 			else if (head > tail)
 			{
-				if (capacity - head + tail + 1 <= capacity / 4) // PROVERI OVO!!!!!
+				if (count - 1 <= capacity / 4) // PROVERI OVO!!!!!
 				{
 					Resize(capacity / 2);
 				}
 			}
-			else
+			else 
 			{
-				// Ovo je samo za probavanje koda...
-				//cout << "Queue is empty";
+				if (count - 1 <= capacity / 4)
+				{
+					Resize(capacity / 2);
+				}
 			}
 			count--;
 			LeaveCriticalSection(&criticalSection);
@@ -109,7 +125,7 @@ protected:
 
 	void Resize(int newCapacity)
 	{
-		if (newCapacity > INITIAL_SIZE)
+		if (newCapacity >= INITIAL_SIZE)
 		{
 			T *newData = new T[newCapacity];
 			if (head > tail)
@@ -138,7 +154,14 @@ protected:
 			}
 			else
 			{
-				newData[0] = data[head];
+				int dataIndex = head;
+				newData[0] = data[dataIndex];
+				for (int i = 1; i < count; i++)
+				{
+					dataIndex = (dataIndex + 1) % capacity;
+					newData[i] = data[dataIndex];
+				}
+				tail = count;
 			}
 			capacity = newCapacity;
 			head = 0;

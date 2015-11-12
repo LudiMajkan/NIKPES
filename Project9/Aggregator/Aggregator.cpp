@@ -2,27 +2,55 @@
 //
 
 #include "stdafx.h"
+#include "Aggregator.h"
 
-
-int _tmain(int argc, _TCHAR* argv[])
+bool Aggregator::InitializeConnection(char* ipAddress, unsigned short port)
 {
+	if (InitializeWindowsSockets() == false)
+	{
+		// we won't log anything since it will be logged
+		// by InitializeWindowsSockets() function
+		return false;
+	}
 
-	ThreadSafeQueue<int> *q = new ThreadSafeQueue<int>();
+	// create a socket
+	connectSocket = socket(AF_INET,
+		SOCK_STREAM,
+		IPPROTO_TCP);
 
-	q->Enqueue(1);
-	q->Enqueue(2);
-	q->Enqueue(3);
-	q->Enqueue(4);
+	if (connectSocket == INVALID_SOCKET)
+	{
+		printf("socket failed with error: %ld\n", WSAGetLastError());
+		WSACleanup();
+		return false;
+	}
 
-	int a = q->Dequeue();
-	int b = q->Dequeue();
-	int c = q->Dequeue();
-	q->Enqueue(5);
-	q->Enqueue(6);
-	a = q->Dequeue();
-	b = q->Dequeue();
-	c = q->Dequeue();
-	q->~ThreadSafeQueue();
-	return 0;
+	serverAddress.sin_family = AF_INET;
+	serverAddress.sin_addr.s_addr = inet_addr(ipAddress);
+	serverAddress.sin_port = htons(port);
+	// connect to server specified in serverAddress and socket connectSocket
+	if (connect(connectSocket, (SOCKADDR*)&serverAddress, sizeof(serverAddress)) == SOCKET_ERROR)
+	{
+		printf("Unable to connect to server.\n");
+		closesocket(connectSocket);
+		WSACleanup();
+	}
+	return true;
 }
+bool Aggregator::InitializeWindowsSockets()
+{
+	WSADATA wsaData;
+	// Initialize windows sockets library for this process
+	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+	{
+		printf("WSAStartup failed with error: %d\n", WSAGetLastError());
+		return false;
+	}
+	return true;
+}
+
+
+
+
+
 

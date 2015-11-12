@@ -10,8 +10,12 @@
 #include <stdio.h>
 #include <tchar.h>
 #include <windows.h>
+/*#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <stdlib.h>
+#include <conio.h>*/
+
+
 #include "../Common/ThreadSafeQueue.h"
-
-
 
 // TODO: reference additional headers your program requires here
