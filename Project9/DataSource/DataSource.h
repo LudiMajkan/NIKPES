@@ -18,6 +18,10 @@ public:
 	{
 		return acceptedSocket;
 	}
+	void SetAcceptedSocket(SOCKET acceptedSocketNew)
+	{
+		acceptedSocket = acceptedSocketNew;
+	}
 	char* GetRecvbuf()
 	{
 		return recvbuf;
@@ -31,6 +35,7 @@ public:
 	{
 		return hints;
 	}
+
 
 protected:
 	// Socket used for listening for new clients 
