@@ -94,6 +94,11 @@ bool Aggregator::InitializeConnection(char* ipAddress, unsigned short port)
 	serverAddress.sin_family = AF_INET;
 	serverAddress.sin_addr.s_addr = inet_addr(ipAddress);
 	serverAddress.sin_port = htons(port);
+
+
+	
+
+
 	// connect to server specified in serverAddress and socket connectSocket
 	if (connect(connectSocket, (SOCKADDR*)&serverAddress, sizeof(serverAddress)) == SOCKET_ERROR)
 	{

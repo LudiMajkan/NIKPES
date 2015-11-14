@@ -9,7 +9,10 @@
 
 #include <stdio.h>
 #include <tchar.h>
-
-
+#include <ws2tcpip.h>
+#include <WinSock2.h>
+#include <stdlib.h>
+#include <conio.h>
+#include "../Common/ThreadSafeQueue.h"
 
 // TODO: reference additional headers your program requires here

@@ -25,6 +25,31 @@ public:
 	{
 		return serverAddress;
 	}
+	SOCKET GetListenSocket()
+	{
+		return listenSocket;
+	}
+	SOCKET GetAcceptedSocket()
+	{
+		return acceptedSocket;
+	}
+	void SetAcceptedSocket(SOCKET acceptedSocketNew)
+	{
+		acceptedSocket = acceptedSocketNew;
+	}
+	char* GetRecvbuf()
+	{
+		return recvbuf;
+	}
+	addrinfo *GetResultingAddress()
+	{
+		return resultingAddress;
+	}
+
+	addrinfo GetHints()
+	{
+		return hints;
+	}
 protected:
 	// socket used to communicate with server
 	SOCKET connectSocket = INVALID_SOCKET;
