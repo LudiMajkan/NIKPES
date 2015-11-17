@@ -8,6 +8,7 @@ class DataDestination
 public:
 	DataDestination(unsigned short port, char *ipAddress)
 	{
+		connectSocket = INVALID_SOCKET;
 		InitializeConnection(ipAddress, port);
 	}
 	~DataDestination();
@@ -29,7 +30,7 @@ public:
 	}
 protected:
 	// socket used to communicate with server
-	SOCKET connectSocket = INVALID_SOCKET;
+	SOCKET connectSocket;
 	// variable used to store function return value
 	int iResult;
 	// create and initialize address structure

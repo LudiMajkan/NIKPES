@@ -8,6 +8,9 @@
 
 DataSource::DataSource(char *port)
 {
+	listenSocket = INVALID_SOCKET;
+	acceptedSocket = INVALID_SOCKET;
+	resultingAddress = NULL;
 	InitializeServer(port);
 }
 DataSource::~DataSource()

@@ -11,6 +11,9 @@ class ThreadSafeQueue
 public:
 	ThreadSafeQueue(T* dataToCopy, int size)
 	{
+		head = 0;
+		tail = -1;
+		capacity = INITIAL_SIZE;
 		InitializeCriticalSection(&criticalSection);
 
 		if (newCapacity >= capacity)
@@ -26,6 +29,8 @@ public:
 	}
 	ThreadSafeQueue(int initialSize)
 	{
+		head = 0;
+		tail = -1;
 		InitializeCriticalSection(&criticalSection);
 
 		data = new T[initialSize];
@@ -33,8 +38,10 @@ public:
 	}
 	ThreadSafeQueue()
 	{
+		head = 0;
+		tail = -1;
 		InitializeCriticalSection(&criticalSection);
-
+		capacity = INITIAL_SIZE;
 		data = new T[INITIAL_SIZE];
 	}
 
@@ -116,10 +123,10 @@ public:
 
 protected:
 	T *data;
-	int count = 0;
-	int capacity = INITIAL_SIZE;
-	int head = 0;
-	int tail = -1;
+	int count;
+	int capacity;
+	int head;
+	int tail;
 
 	CRITICAL_SECTION criticalSection;
 

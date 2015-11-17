@@ -39,14 +39,14 @@ public:
 
 protected:
 	// Socket used for listening for new clients 
-	SOCKET listenSocket = INVALID_SOCKET;
+	SOCKET listenSocket;
 	// Socket used for communication with client
-	SOCKET acceptedSocket = INVALID_SOCKET;
+	SOCKET acceptedSocket;
 	int iResult;
 	// Buffer used for storing incoming data
 	char recvbuf[DEFAULT_BUFLEN];
 	// Prepare address information structures
-	addrinfo *resultingAddress = NULL;
+	addrinfo *resultingAddress;
 	addrinfo hints;
 
 	bool InitializeServer(char *port);

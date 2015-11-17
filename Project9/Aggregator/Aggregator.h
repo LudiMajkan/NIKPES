@@ -9,6 +9,11 @@ class Aggregator
 public:
 	Aggregator(unsigned short port, char *ipAddress, char *portForChilds)
 	{
+		connectSocket = INVALID_SOCKET;
+		listenSocket = INVALID_SOCKET;
+		acceptedSocket = INVALID_SOCKET;
+		resultingAddress = NULL;
+
 		InitializeConnection(ipAddress, port);
 		InitializeServer(portForChilds);
 	}
@@ -52,7 +57,7 @@ public:
 	}
 protected:
 	// socket used to communicate with server
-	SOCKET connectSocket = INVALID_SOCKET;
+	SOCKET connectSocket;
 	// variable used to store function return value
 	int iResult;
 	// create and initialize address structure
@@ -60,14 +65,14 @@ protected:
 
 	//SERVER PARAMETERS
 	// Socket used for listening for new clients 
-	SOCKET listenSocket = INVALID_SOCKET;
+	SOCKET listenSocket;
 	// Socket used for communication with client
-	SOCKET acceptedSocket = INVALID_SOCKET;
+	SOCKET acceptedSocket;
 	//int iResult;
 	// Buffer used for storing incoming data
 	char recvbuf[DEFAULT_BUFLEN];
 	// Prepare address information structures
-	addrinfo *resultingAddress = NULL;
+	addrinfo *resultingAddress;
 	addrinfo hints;
 
 	bool InitializeServer(char *port);

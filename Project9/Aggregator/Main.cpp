@@ -4,14 +4,26 @@
 typedef struct structForhWaitForChilds
 {
 	Aggregator *agr;
-	//niz redova
-	bool ShutdownThread = false;
+	SOCKET *sockets;//ZAMENITI DINAMICNIM NIZOM
+	bool ShutdownThread;
 }T_StructForhWaitForChilds;
 
+bool setNonblockingParams(SOCKET socket, bool isReceiving);
+char* receive(int length, SOCKET socket);
 DWORD WINAPI receiveChilds(LPVOID lpParam)
 {
 	T_StructForhWaitForChilds *tstruct = (T_StructForhWaitForChilds*)lpParam;
+	tstruct->ShutdownThread = false;
 	int iResult = 0;
+	//NONBLOCKING MODE
+	unsigned long int nonBlockingMode = 1;
+	iResult = ioctlsocket(tstruct->agr->GetListenSocket(), FIONBIO, &nonBlockingMode);
+	if (iResult == SOCKET_ERROR)
+	{
+		printf("ioctlsocket failed with error: %ld\n", WSAGetLastError());
+		return 1;
+	}
+	
 	while (true)
 	{
 		if (tstruct->ShutdownThread)
@@ -19,8 +31,9 @@ DWORD WINAPI receiveChilds(LPVOID lpParam)
 			return 0;
 		}
 		SOCKET someSocket2 = tstruct->agr->GetListenSocket();
-		SOCKET someSocket = accept(someSocket2, NULL, NULL);
-		tstruct->agr->SetAcceptedSocket(someSocket);
+		setNonblockingParams(someSocket2, true);
+		//dodaj u niz
+		tstruct->sockets[0] = accept(someSocket2, NULL, NULL);	
 	}
 	return 0;
 }
@@ -28,6 +41,7 @@ DWORD WINAPI receiveChilds(LPVOID lpParam)
 DWORD WINAPI receiveDataFromParrent(LPVOID lpParam)
 {
 	T_StructForhWaitForChilds *tstruct = (T_StructForhWaitForChilds*)lpParam;
+	tstruct->ShutdownThread = false;
 	int iResult = 0;
 	printf("Aggregator now receiving data...\n");
 	//NONBLOCKING MODE
@@ -38,50 +52,77 @@ DWORD WINAPI receiveDataFromParrent(LPVOID lpParam)
 		printf("ioctlsocket failed with error: %ld\n", WSAGetLastError());
 		return 1;
 	}
-	// Initialize select parameters
-	FD_SET set;
-	timeval timeVal;
-
-	FD_ZERO(&set);
-	// Add socket we will wait to read from
-	FD_SET(tstruct->agr->GetConnectSocket(), &set);
-
-	// Set timeouts to zero since we want select to return
-	// instantaneously
-	timeVal.tv_sec = 0;
-	timeVal.tv_usec = 0;
-
-	iResult = select(0 /* ignored */, &set, NULL, NULL, &timeVal);
-
-	// lets check if there was an error during select
-	if (iResult == SOCKET_ERROR)
-	{
-		fprintf(stderr, "select failed with error: %ld\n", WSAGetLastError());
-		return false;
-	}
-	//NONBLOCKING SETTINGS END-----------------------------------------------------------
 	do
 	{
 		if (tstruct->ShutdownThread)
 		{
 			return 0;
 		}
-		iResult = recv(tstruct->agr->GetConnectSocket(), tstruct->agr->GetRecvbuf(), DEFAULT_BUFLEN, 0);
-		if (iResult > 0)
-		{
-			printf("received data: %s\n", tstruct->agr->GetRecvbuf());
-			printf("try to send data to Aggregator or DataSource\n");
-			if (tstruct->agr->GetAcceptedSocket() != INVALID_SOCKET)
-				iResult = send(tstruct->agr->GetAcceptedSocket(), tstruct->agr->GetRecvbuf(), (int)strlen(tstruct->agr->GetRecvbuf()) + 1, 0);
-		}
-		else
-		{
-			printf("Have no job to do, let's sleep a little \n");
-			Sleep(3000);
-		}
+
+		char *lengthChar = receive(4, tstruct->agr->GetConnectSocket());
+		int length = *(int*)lengthChar;
+		char *data = receive(length, tstruct->agr->GetConnectSocket());
+		printf("received data: %s\n", tstruct->agr->GetRecvbuf());
+		printf("try to send data to Aggregator or DataSource\n");
+		if (tstruct->agr->GetAcceptedSocket() != INVALID_SOCKET)
+			iResult = send(tstruct->agr->GetAcceptedSocket(), tstruct->agr->GetRecvbuf(), (int)strlen(tstruct->agr->GetRecvbuf()) + 1, 0);
 	} while (1);
 }
 
+bool setNonblockingParams(SOCKET socket, bool isReceiving)
+{
+	while(true)
+	{
+		int iResult = 0;
+		// Initialize select parameters
+		FD_SET set;
+		timeval timeVal;
+
+		FD_ZERO(&set);
+		// Add socket we will wait to read from
+		FD_SET(socket, &set);
+
+		// Set timeouts to zero since we want select to return
+		// instantaneously
+		timeVal.tv_sec = 0;
+		timeVal.tv_usec = 0;
+		if(isReceiving)
+		{
+			iResult = select(0 /* ignored */, &set, NULL, NULL, &timeVal);
+		}
+		else
+		{
+			iResult = select(0 /* ignored */, NULL, &set, NULL, &timeVal);
+		}
+		// lets check if there was an error during select
+		if (iResult == SOCKET_ERROR)
+		{
+			fprintf(stderr, "select failed with error: %ld\n", WSAGetLastError());
+			return false;
+		}
+		if(iResult==0)
+		{
+			Sleep(500);
+		}
+		else
+		{
+			break;
+		}
+	}
+		//NONBLOCKING SETTINGS END-----------------------------------------------------------
+}
+
+char* receive(int length, SOCKET socket)
+{
+	int received = 0;
+	char* data = (char*)malloc(sizeof(char)*length);
+	while(received<length)
+	{
+		setNonblockingParams(socket, true);
+		received += recv(socket, data + received, length - received, 0);
+	}
+	return data;
+}
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -123,10 +164,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	int a = q->Dequeue();
 	int b = q->Dequeue();*/
 
-	CloseHandle(hWaitForChilds);
+	//CloseHandle(hWaitForChilds);
 	free(ipAddress);
 	free(portForChilds);
 	free(tstruct);
-	WaitForSingleObject(hWaitForChilds, INFINITE);																						
+	//WaitForSingleObject(hWaitForChilds, INFINITE);																						
 	return 0;
 }
