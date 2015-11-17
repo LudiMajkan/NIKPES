@@ -23,6 +23,7 @@ typedef struct structForhWaitForChilds
 bool setNonblockingParams(SOCKET socket, bool isReceiving);
 char* receive(int length, SOCKET socket);
 void AddToArrayOfQueues(SOCKET socket, structForhWaitForChilds *tstruct);
+int SendData(int size, char* data, SOCKET socket);
 
 //Thread's method that sends data from the queue
 DWORD WINAPI Propagate(LPVOID lpParam)
@@ -106,11 +107,13 @@ DWORD WINAPI receiveDataFromParrent(LPVOID lpParam)
 			return 0;
 		}
 
-		char *lengthChar = receive(4, tstruct->agr->GetConnectSocket());
+		char *lengthChar = (char*)malloc(sizeof(char) * 4);
+		lengthChar = receive(4, tstruct->agr->GetConnectSocket());
 		int length = *(int*)lengthChar;
-		char *data = receive(length, tstruct->agr->GetConnectSocket());
-		printf("received data: %s\n", tstruct->agr->GetRecvbuf());
-		//printf("try to send data to Aggregator or DataSource\n");
+		char *data = (char*)malloc(sizeof(char)*length + 1);
+		data = receive(length, tstruct->agr->GetConnectSocket());
+		data[length] = '\0';
+		printf("received data: %s\n", data);
 
 		//TODO: UBACI DEO ZA PUNJENJE REDOVA!
 

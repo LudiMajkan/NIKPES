@@ -201,7 +201,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	char *messageToSend = (char*)malloc(sizeof(char)*10);
 	for(int i = 0; i<10; i++)
 	{
-			messageToSend[i] = 0x09;
+			messageToSend[i] = 0x41;
 	}
 	
 	for(int i = 0; i<10; i++)
