@@ -54,6 +54,7 @@ public:
 
 	int GetCount()
 	{
+		//TODO: When there is 2 aggrs access violation occurs
 		EnterCriticalSection(&criticalSection);
 		int retVal = count;
 		LeaveCriticalSection(&criticalSection);

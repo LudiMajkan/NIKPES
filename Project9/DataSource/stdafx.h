@@ -11,5 +11,6 @@
 #include <tchar.h>
 #include <ws2tcpip.h>
 #include <stdlib.h>
+#include "../Common/ThreadSafeQueue.h"
 
 // TODO: reference additional headers your program requires here

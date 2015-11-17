@@ -1,15 +1,62 @@
 #include "stdafx.h"
 #include "Aggregator.h"
 
+#define SLEEP_TIME_INTERVAL 20
+
+typedef struct arrayOfQueues
+{
+	ThreadSafeQueue<char> *queue;
+	HANDLE threadHandle;
+	DWORD threadID;
+	SOCKET socket;
+	bool isAlive;
+}T_ArrayOfQueues;
+
 typedef struct structForhWaitForChilds
 {
 	Aggregator *agr;
-	SOCKET *sockets;//ZAMENITI DINAMICNIM NIZOM
+	int count;
+	arrayOfQueues *queues;
 	bool ShutdownThread;
 }T_StructForhWaitForChilds;
 
 bool setNonblockingParams(SOCKET socket, bool isReceiving);
 char* receive(int length, SOCKET socket);
+void AddToArrayOfQueues(SOCKET socket, structForhWaitForChilds *tstruct);
+
+//Thread's method that sends data from the queue
+DWORD WINAPI Propagate(LPVOID lpParam)
+{
+	T_ArrayOfQueues *tarray = (T_ArrayOfQueues*)lpParam;
+
+	while (true)
+	{
+		if (!tarray->isAlive)
+		{
+			printf("Closing thread...\n");
+
+			CloseHandle(tarray->threadHandle);				//Can this be done here?
+
+			return 0;
+		}
+
+		//ThreadSafeQueue<int> *queue = (array->queue);
+		if (tarray->queue->GetCount() > 0)
+		{
+			char retVal = tarray->queue->Dequeue();
+			SendData(1, &retVal, tarray->socket); //TODO: finish sending implementation
+
+			printf("%d\n", retVal);
+		}
+		else
+		{
+			Sleep(SLEEP_TIME_INTERVAL);
+		}
+	}
+
+	return 0;
+}
+
 DWORD WINAPI receiveChilds(LPVOID lpParam)
 {
 	T_StructForhWaitForChilds *tstruct = (T_StructForhWaitForChilds*)lpParam;
@@ -33,7 +80,7 @@ DWORD WINAPI receiveChilds(LPVOID lpParam)
 		SOCKET someSocket2 = tstruct->agr->GetListenSocket();
 		setNonblockingParams(someSocket2, true);
 		//dodaj u niz
-		tstruct->sockets[0] = accept(someSocket2, NULL, NULL);	
+		AddToArrayOfQueues(accept(someSocket2, NULL, NULL), tstruct);
 	}
 	return 0;
 }
@@ -63,9 +110,10 @@ DWORD WINAPI receiveDataFromParrent(LPVOID lpParam)
 		int length = *(int*)lengthChar;
 		char *data = receive(length, tstruct->agr->GetConnectSocket());
 		printf("received data: %s\n", tstruct->agr->GetRecvbuf());
-		printf("try to send data to Aggregator or DataSource\n");
-		if (tstruct->agr->GetAcceptedSocket() != INVALID_SOCKET)
-			iResult = send(tstruct->agr->GetAcceptedSocket(), tstruct->agr->GetRecvbuf(), (int)strlen(tstruct->agr->GetRecvbuf()) + 1, 0);
+		//printf("try to send data to Aggregator or DataSource\n");
+
+		//TODO: UBACI DEO ZA PUNJENJE REDOVA!
+
 	} while (1);
 }
 
@@ -122,6 +170,36 @@ char* receive(int length, SOCKET socket)
 		received += recv(socket, data + received, length - received, 0);
 	}
 	return data;
+}
+
+int SendData(int size, char* data, SOCKET socket)
+{
+	int iResult = 0;
+	while (iResult < size)
+	{
+		setNonblockingParams(socket, false);
+		iResult += send(socket, data + iResult, size, 0);
+		if (iResult == SOCKET_ERROR)
+		{
+			printf("send failed with error: %d\n", WSAGetLastError());
+			closesocket(socket);
+			WSACleanup();
+			return 1;
+		}
+	}
+	return iResult;
+}
+
+void AddToArrayOfQueues(SOCKET socket, structForhWaitForChilds *tstruct)
+{
+	//TODO: Critical sectrion?
+	//TODO: Odradi prepakivanje u slucaju probijanja velicine (inicijalno 10)
+	int count = tstruct->count;
+	tstruct->queues[count].queue = new ThreadSafeQueue<char>();
+	tstruct->queues[count].socket = socket;
+	tstruct->queues[count].threadHandle = CreateThread(NULL, 0, &Propagate, tstruct, 0, &tstruct->queues->threadID);
+	tstruct->queues[count].isAlive = true;
+	tstruct->count += 1;
 }
 
 int _tmain(int argc, _TCHAR* argv[])
