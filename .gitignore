@@ -32,7 +32,7 @@ Project9/*.sln
 Project9/*.opensdf
 Project9/*.sdf
 Project9/*.suo
-Project9/*/.vcxproj
+Project9/*/*.vcxproj
 
 #debug
 Project9/Debug/
