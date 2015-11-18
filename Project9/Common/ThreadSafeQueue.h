@@ -9,13 +9,14 @@ template <class T>
 class ThreadSafeQueue
 {
 public:
+	//Not needed
 	ThreadSafeQueue(T* dataToCopy, int size)
 	{
 		head = 0;
 		tail = -1;
 		capacity = INITIAL_SIZE;
 		InitializeCriticalSection(&criticalSection);
-
+		count = size;
 		if (newCapacity >= capacity)
 		{
 			capacity = newCapacity;
@@ -32,7 +33,7 @@ public:
 		head = 0;
 		tail = -1;
 		InitializeCriticalSection(&criticalSection);
-
+		count = 0;
 		data = new T[initialSize];
 		capacity = initialSize;
 	}
@@ -43,6 +44,7 @@ public:
 		InitializeCriticalSection(&criticalSection);
 		capacity = INITIAL_SIZE;
 		data = new T[INITIAL_SIZE];
+		count = 0;
 	}
 
 	~ThreadSafeQueue()
@@ -80,11 +82,11 @@ public:
 
 	T Dequeue()
 	{
-		T retVal = NULL;
-		if (count == 0)
+		T retVal;
+		/*if (count == 0)
 		{
 			return QUEUE_IS_EMPTY;
-		}
+		}*/
 		if (count > 0)
 		{
 			EnterCriticalSection(&criticalSection);

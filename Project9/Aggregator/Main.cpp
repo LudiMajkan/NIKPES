@@ -3,9 +3,15 @@
 
 #define SLEEP_TIME_INTERVAL 20
 
+typedef struct structForData
+{
+	int size;
+	char *data;
+}T_StructForData;
+
 typedef struct arrayOfQueues
 {
-	ThreadSafeQueue<char> *queue;
+	ThreadSafeQueue<T_StructForData> *queue;
 	HANDLE threadHandle;
 	DWORD threadID;
 	SOCKET socket;
@@ -41,13 +47,13 @@ DWORD WINAPI Propagate(LPVOID lpParam)
 			return 0;
 		}
 
-		//ThreadSafeQueue<int> *queue = (array->queue);
 		if (tarray->queue->GetCount() > 0)
 		{
-			char retVal = tarray->queue->Dequeue();
-			SendData(1, &retVal, tarray->socket); //TODO: finish sending implementation
-
-			printf("%d\n", retVal);
+			T_StructForData retVal = tarray->queue->Dequeue();
+			char *dataToSend = (char*)malloc(sizeof(char)*retVal.size + 4);
+			*(int*)dataToSend = retVal.size;
+			memcpy((char*)(dataToSend + sizeof(int)), retVal.data, retVal.size);
+			SendData(retVal.size + 4, dataToSend, tarray->socket); //TODO: finish sending implementation
 		}
 		else
 		{
@@ -110,13 +116,19 @@ DWORD WINAPI receiveDataFromParrent(LPVOID lpParam)
 		char *lengthChar = (char*)malloc(sizeof(char) * 4);
 		lengthChar = receive(4, tstruct->agr->GetConnectSocket());
 		int length = *(int*)lengthChar;
-		char *data = (char*)malloc(sizeof(char)*length + 1);
+		char *data = (char*)malloc(sizeof(char)*length);
 		data = receive(length, tstruct->agr->GetConnectSocket());
-		data[length] = '\0';
-		printf("received data: %s\n", data);
 
+		T_StructForData *dataForQueue = new T_StructForData();
+		dataForQueue->size = length;
+		dataForQueue->data = data;
 		//TODO: UBACI DEO ZA PUNJENJE REDOVA!
 
+		
+		for(int i = 0; i < tstruct->count; i++)
+		{
+			tstruct->queues[i].queue->Enqueue(*dataForQueue);
+		}
 	} while (1);
 }
 
@@ -171,6 +183,13 @@ char* receive(int length, SOCKET socket)
 	{
 		setNonblockingParams(socket, true);
 		received += recv(socket, data + received, length - received, 0);
+		//TODO: hendlanje gresaka
+		if (received == SOCKET_ERROR)
+		{
+			printf("Receive failed with error: %d\n", WSAGetLastError());
+			closesocket(socket);
+			WSACleanup();
+		}
 	}
 	return data;
 }
@@ -198,11 +217,11 @@ void AddToArrayOfQueues(SOCKET socket, structForhWaitForChilds *tstruct)
 	//TODO: Critical sectrion?
 	//TODO: Odradi prepakivanje u slucaju probijanja velicine (inicijalno 10)
 	int count = tstruct->count;
-	tstruct->queues[count].queue = new ThreadSafeQueue<char>();
+	tstruct->queues[count].queue = new ThreadSafeQueue<T_StructForData>();
 	tstruct->queues[count].socket = socket;
-	tstruct->queues[count].threadHandle = CreateThread(NULL, 0, &Propagate, tstruct, 0, &tstruct->queues->threadID);
+	tstruct->queues[count].threadHandle = CreateThread(NULL, 0, &Propagate, &(tstruct->queues[count]), 0, &tstruct->queues->threadID);
 	tstruct->queues[count].isAlive = true;
-	tstruct->count += 1;
+	tstruct->count++;
 }
 
 int _tmain(int argc, _TCHAR* argv[])
@@ -218,6 +237,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	printf("please enter the port you want to listen: \n");
 	scanf("%s", portForChilds);	
 	T_StructForhWaitForChilds *tstruct = new T_StructForhWaitForChilds();
+	tstruct->queues = (T_ArrayOfQueues*)malloc(sizeof(T_ArrayOfQueues)*10);
 	tstruct->agr = new Aggregator(port, ipAddress, portForChilds);
 	DWORD itForChildsID;
 	DWORD ithReceiveDataFromParrent;
@@ -225,30 +245,18 @@ int _tmain(int argc, _TCHAR* argv[])
 	HANDLE hReceiveDataFromParrent = CreateThread(NULL, 0, &receiveDataFromParrent, tstruct, 0, &ithReceiveDataFromParrent);
 	int liI = getchar();
 	liI = getchar();
-	//iResult = send(connectSocket, messageToSend, (int)strlen(messageToSend) + 1, 0);													
+	
+	//Last changes in main
+	for(int i =0; i<tstruct->count; i++)
+	{
+		tstruct->queues[i].isAlive = false;
+		CloseHandle(tstruct->queues[i].threadHandle);
+	}
 
-	/*ThreadSafeQueue<int> *q = new ThreadSafeQueue<int>();
-
-	q->Enqueue(1);
-	q->Enqueue(2);
-	q->Enqueue(3);
-	q->Enqueue(4);
-	q->Enqueue(5);
-	int a = q->Dequeue();
-	int b = q->Dequeue();
-	int c = q->Dequeue();
-	a = q->Dequeue();
-	b = q->Dequeue();
-	q->~ThreadSafeQueue();
-
-	q->Enqueue(0);
-	int a = q->Dequeue();
-	int b = q->Dequeue();*/
-
-	//CloseHandle(hWaitForChilds);
+	CloseHandle(hWaitForChilds);
 	free(ipAddress);
 	free(portForChilds);
 	free(tstruct);
-	//WaitForSingleObject(hWaitForChilds, INFINITE);																						
+	WaitForSingleObject(hWaitForChilds, INFINITE);																						
 	return 0;
 }
