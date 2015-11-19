@@ -82,6 +82,7 @@ public:
 
 	T Dequeue()
 	{
+		EnterCriticalSection(&criticalSection);
 		T retVal;
 		/*if (count == 0)
 		{
@@ -89,8 +90,6 @@ public:
 		}*/
 		if (count > 0)
 		{
-			EnterCriticalSection(&criticalSection);
-
 			retVal = data[head];
 			if (count > 1)
 			{
@@ -119,8 +118,8 @@ public:
 				}
 			}
 			count--;
-			LeaveCriticalSection(&criticalSection);
 		}
+		LeaveCriticalSection(&criticalSection);
 		return retVal;
 	}
 
@@ -150,8 +149,8 @@ protected:
 					newData[capacity - head + i] = data[i];
 				}
 
-				// Postavljamo tail na stari capacity koji je zapravo broj elemenata.
-				tail = capacity;
+				// Postavljamo tail na stari capacity koji je zapravo broj elemenata. proveri ovo!
+				tail = count;
 			}
 			else if (head < tail)
 			{

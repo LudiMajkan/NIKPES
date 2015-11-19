@@ -134,4 +134,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	tstruct->ShutdownThread = true;
 	CloseHandle(hReceiveDataFromParrent);
+	closesocket(tstruct->dd->GetConnectSocket());
+	WSACleanup();
+	return 0;
 }

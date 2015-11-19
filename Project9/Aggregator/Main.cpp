@@ -2,6 +2,7 @@
 #include "Aggregator.h"
 
 #define SLEEP_TIME_INTERVAL 20
+#define INITIAL_SIZE 4
 
 typedef struct structForData
 {
@@ -11,25 +12,49 @@ typedef struct structForData
 
 typedef struct arrayOfQueues
 {
+	// A pointer to the ThreadSafeQueue object.
 	ThreadSafeQueue<T_StructForData> *queue;
+
+	// A HANDLE fot the consumer thread.
 	HANDLE threadHandle;
+
+	// A consumer thread ID
 	DWORD threadID;
+
+	// A socket used to connect to the client 
 	SOCKET socket;
+
+	// A flag that shows if the consumer thread should get terminated.
 	bool isAlive;
 }T_ArrayOfQueues;
 
 typedef struct structForhWaitForChilds
 {
+	// Pointer to Aggregator that initializes connecion and server for children.
 	Aggregator *agr;
+
+	// The capacity of the "queues" array.
+	int capacity;
+	
+	// The number of queues in the "queues" array.
 	int count;
-	arrayOfQueues *queues;
+
+	// A dynamic array of queues with data.
+	T_ArrayOfQueues *queues;
+
+	// A flag that shows if the thread should get terminated.
 	bool ShutdownThread;
+
+	// A CRITICAL_SECTION object used for synchronization of threads.
+	CRITICAL_SECTION criticalSection;
 }T_StructForhWaitForChilds;
 
 bool setNonblockingParams(SOCKET socket, bool isReceiving);
 char* receive(int length, SOCKET socket);
 void AddToArrayOfQueues(SOCKET socket, structForhWaitForChilds *tstruct);
 int SendData(int size, char* data, SOCKET socket);
+void ResizeArray(structForhWaitForChilds *tstructToBeHandled, size_t newCapacity);
+void RemoveQueueFromTheArrayOfQueues(structForhWaitForChilds *tstructToBeHandled, size_t index);
 
 //Thread's method that sends data from the queue
 DWORD WINAPI Propagate(LPVOID lpParam)
@@ -54,6 +79,7 @@ DWORD WINAPI Propagate(LPVOID lpParam)
 			*(int*)dataToSend = retVal.size;
 			memcpy((char*)(dataToSend + sizeof(int)), retVal.data, retVal.size);
 			SendData(retVal.size + 4, dataToSend, tarray->socket); //TODO: finish sending implementation
+			Sleep(1);
 		}
 		else
 		{
@@ -214,14 +240,49 @@ int SendData(int size, char* data, SOCKET socket)
 
 void AddToArrayOfQueues(SOCKET socket, structForhWaitForChilds *tstruct)
 {
-	//TODO: Critical sectrion?
-	//TODO: Odradi prepakivanje u slucaju probijanja velicine (inicijalno 10)
+	EnterCriticalSection(&(tstruct->criticalSection));
+
 	int count = tstruct->count;
+	if (count == tstruct->capacity)
+	{
+		ResizeArray(tstruct, tstruct->capacity * 2);
+	}
+
 	tstruct->queues[count].queue = new ThreadSafeQueue<T_StructForData>();
 	tstruct->queues[count].socket = socket;
 	tstruct->queues[count].threadHandle = CreateThread(NULL, 0, &Propagate, &(tstruct->queues[count]), 0, &tstruct->queues->threadID);
 	tstruct->queues[count].isAlive = true;
 	tstruct->count++;
+
+	LeaveCriticalSection(&(tstruct->criticalSection));
+}
+
+void RemoveQueueFromTheArrayOfQueues(structForhWaitForChilds *tstructToBeHandled, size_t index)
+{
+	if (index < tstructToBeHandled->count && index >= 0)
+	{
+		delete(&(tstructToBeHandled->queues[index]));
+
+		tstructToBeHandled->queues[index] = tstructToBeHandled->queues[tstructToBeHandled->count];
+		tstructToBeHandled->count--;
+	}
+}
+
+// Not thread safe! If used, it should be called inside a critical section.
+void ResizeArray(structForhWaitForChilds *tstructToBeHandled, size_t newCapacity)
+{
+	if (newCapacity > INITIAL_SIZE)
+	{
+		arrayOfQueues *newData = new arrayOfQueues[newCapacity];
+
+		// Copy the data from old array to the newly created array...
+		memcpy(newData, tstructToBeHandled->queues, sizeof(T_ArrayOfQueues) * tstructToBeHandled->count);
+
+		tstructToBeHandled->capacity = newCapacity;
+		
+		delete(tstructToBeHandled->queues);
+		tstructToBeHandled->queues = newData;
+	}
 }
 
 int _tmain(int argc, _TCHAR* argv[])
@@ -237,8 +298,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	printf("please enter the port you want to listen: \n");
 	scanf("%s", portForChilds);	
 	T_StructForhWaitForChilds *tstruct = new T_StructForhWaitForChilds();
-	tstruct->queues = (T_ArrayOfQueues*)malloc(sizeof(T_ArrayOfQueues)*10);
+	tstruct->capacity = INITIAL_SIZE;
+	tstruct->queues = (T_ArrayOfQueues*)malloc(sizeof(T_ArrayOfQueues)*INITIAL_SIZE);
 	tstruct->agr = new Aggregator(port, ipAddress, portForChilds);
+	InitializeCriticalSection(&(tstruct->criticalSection));
 	DWORD itForChildsID;
 	DWORD ithReceiveDataFromParrent;
 	HANDLE hWaitForChilds = CreateThread(NULL, 0, &receiveChilds, tstruct, 0, &itForChildsID);
@@ -250,6 +313,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	for(int i =0; i<tstruct->count; i++)
 	{
 		tstruct->queues[i].isAlive = false;
+		Sleep(1000);
 		CloseHandle(tstruct->queues[i].threadHandle);
 	}
 
@@ -257,6 +321,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	free(ipAddress);
 	free(portForChilds);
 	free(tstruct);
-	WaitForSingleObject(hWaitForChilds, INFINITE);																						
+	WaitForSingleObject(hWaitForChilds, INFINITE);		
+	closesocket(tstruct->agr->GetConnectSocket());
+	WSACleanup();
 	return 0;
 }

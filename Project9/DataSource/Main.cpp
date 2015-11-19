@@ -125,7 +125,7 @@ int SendData(int size, char* data, SOCKET socket)
 		iResult += send(socket, data + iResult, size, 0);
 		if(iResult == SOCKET_ERROR)
 		{
-			 printf("send failed with error: %d\n", WSAGetLastError());
+			printf("send failed with error: %d\n", WSAGetLastError());
 			closesocket(socket);
 			WSACleanup();
 			return 1;
@@ -138,6 +138,7 @@ void AddToArrayOfSockets(SOCKET socket, structForhWaitForChilds *tstruct)
 {
 	int count = tstruct->count;
 	tstruct->sockets[count] = socket;
+	tstruct->count++;
 }
 
 int _tmain(int argc, _TCHAR* argv[])
@@ -164,21 +165,39 @@ int _tmain(int argc, _TCHAR* argv[])
 	{
 			messageToSend[i] = 0x41;
 	}
-	
-	for(int i = 0; i<10; i++)
+
+	/*for(int i = 0; i<100000; i++)
 	{
-		printf("trying to send data to aggregator\n");
-		int sizeOfMessage = 10;
+		//printf("trying to send data to aggregator\n");
+		int sizeOfMessage = 1000008;
 		int iResult = 0;
 		iResult = SendData(sizeof(int), (char*)&sizeOfMessage, tstruct->sockets[0]);
-		iResult = SendData(sizeof(char) * 10, messageToSend, tstruct->sockets[0]);
-	}
-	liI = getchar(); 
+		iResult = SendData(sizeof(char) * 1000008, messageToSend, tstruct->sockets[0]);
+	}*/
+	do
+	{
+		for(int i = 0; i<100000; i++)
+		{
+			//printf("trying to send data to aggregator\n");
+			int sizeOfMessage = 10;
+			int iResult = 0;
+			for(int j = 0; j< tstruct->count; j++)
+			{
+				iResult = SendData(sizeof(int), (char*)&sizeOfMessage, tstruct->sockets[j]);
+				iResult = SendData(sizeof(char) * 10, messageToSend, tstruct->sockets[j]);
+			}
+		}
+		printf("Sending done");
+		liI = getchar(); 
+	}while(liI!=32);
 
 	liI = getchar();
 
 	CloseHandle(hWaitForChilds);
 
 	WaitForSingleObject(hWaitForChilds, INFINITE);
+	closesocket(tstruct->ds->GetAcceptedSocket());
+	WSACleanup();
+	delete(tstruct);
 	return 0;
 }
