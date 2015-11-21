@@ -3,6 +3,7 @@
 
 #define SLEEP_TIME_INTERVAL 20
 #define INITIAL_SIZE 4
+#define CLOSE_HANDLE_MACRO (CloseHandle(a));
 
 typedef struct structForData
 {
@@ -66,9 +67,6 @@ DWORD WINAPI Propagate(LPVOID lpParam)
 		if (!tarray->isAlive)
 		{
 			printf("Closing thread...\n");
-
-			CloseHandle(tarray->threadHandle);				//Can this be done here?
-
 			return 0;
 		}
 
@@ -78,8 +76,8 @@ DWORD WINAPI Propagate(LPVOID lpParam)
 			char *dataToSend = (char*)malloc(sizeof(char)*retVal.size + 4);
 			*(int*)dataToSend = retVal.size;
 			memcpy((char*)(dataToSend + sizeof(int)), retVal.data, retVal.size);
-			SendData(retVal.size + 4, dataToSend, tarray->socket); //TODO: finish sending implementation
-			Sleep(1);
+			SendData(retVal.size + 4, dataToSend, tarray->socket); 
+			Sleep(1); //TODO: SKLONI OVO!!!!!
 		}
 		else
 		{
@@ -320,9 +318,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	CloseHandle(hWaitForChilds);
 	free(ipAddress);
 	free(portForChilds);
-	free(tstruct);
 	WaitForSingleObject(hWaitForChilds, INFINITE);		
-	closesocket(tstruct->agr->GetConnectSocket());
+	tstruct->agr->~Aggregator();
 	WSACleanup();
+	delete(tstruct);
 	return 0;
 }

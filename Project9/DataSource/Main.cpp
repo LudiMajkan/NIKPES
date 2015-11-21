@@ -157,9 +157,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	//Inicijalizuj niz redova!
 	HANDLE hWaitForChilds = CreateThread(NULL, 0, &receiveChilds, tstruct, 0, &itForChildsID);
 	HANDLE hSendDataToChilds = CreateThread(NULL, 0, &sendDataToChilds, tstruct, 0, &itSendDataToChilds);
-	int liI = getchar();
-	printf("Press enter to start sending data");
-	liI = getchar();
+	char liI = getchar();
 	char *messageToSend = (char*)malloc(sizeof(char)*10);
 	for(int i = 0; i<10; i++)
 	{
@@ -174,7 +172,9 @@ int _tmain(int argc, _TCHAR* argv[])
 		iResult = SendData(sizeof(int), (char*)&sizeOfMessage, tstruct->sockets[0]);
 		iResult = SendData(sizeof(char) * 1000008, messageToSend, tstruct->sockets[0]);
 	}*/
-	do
+	printf("Press enter to start sending data");
+	liI = getchar();
+	while(liI!='a')
 	{
 		for(int i = 0; i<100000; i++)
 		{
@@ -189,7 +189,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		}
 		printf("Sending done");
 		liI = getchar(); 
-	}while(liI!=32);
+	}
 
 	liI = getchar();
 

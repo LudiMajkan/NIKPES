@@ -49,4 +49,7 @@ bool DataDestination::InitializeWindowsSockets()
 	return true;
 }
 
-
+DataDestination::~DataDestination()
+{
+	closesocket(connectSocket);
+}

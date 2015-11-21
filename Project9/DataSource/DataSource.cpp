@@ -13,10 +13,6 @@ DataSource::DataSource(char *port)
 	resultingAddress = NULL;
 	InitializeServer(port);
 }
-DataSource::~DataSource()
-{
-
-}
 
 bool DataSource::InitializeServer(char *port)
 {
@@ -94,4 +90,10 @@ bool DataSource::InitializeWindowsSockets()
 		return false;
 	}
 	return true;
+}
+
+DataSource::~DataSource()
+{
+	closesocket(acceptedSocket);
+	closesocket(listenSocket);
 }

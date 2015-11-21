@@ -17,7 +17,12 @@ public:
 		InitializeConnection(ipAddress, port);
 		InitializeServer(portForChilds);
 	}
-	~Aggregator();
+	~Aggregator()
+	{
+		closesocket(connectSocket);
+		closesocket(acceptedSocket);
+		closesocket(listenSocket);
+	}
 	SOCKET GetConnectSocket()
 	{
 		return connectSocket;
