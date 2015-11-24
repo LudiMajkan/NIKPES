@@ -29,7 +29,7 @@ typedef struct arrayOfQueues
 	bool isAlive;
 }T_ArrayOfQueues;
 
-typedef struct structForhWaitForChilds
+typedef struct structForhWaitForChildren
 {
 	// Pointer to Aggregator that initializes connecion and server for children.
 	Aggregator *agr;
@@ -48,14 +48,14 @@ typedef struct structForhWaitForChilds
 
 	// A CRITICAL_SECTION object used for synchronization of threads.
 	CRITICAL_SECTION criticalSection;
-}T_StructForhWaitForChilds;
+}T_StructForhWaitForChildren;
 
-bool setNonblockingParams(SOCKET socket, bool isReceiving);
-char* receive(int length, SOCKET socket);
-void AddToArrayOfQueues(SOCKET socket, structForhWaitForChilds *tstruct);
+bool SetNonblockingParams(SOCKET socket, bool isReceiving);
+char* Receive(int length, SOCKET socket);
+void AddToArrayOfQueues(SOCKET socket, T_StructForhWaitForChildren *tstruct);
 int SendData(int size, char* data, SOCKET socket);
-void ResizeArray(structForhWaitForChilds *tstructToBeHandled, size_t newCapacity);
-void RemoveQueueFromTheArrayOfQueues(structForhWaitForChilds *tstructToBeHandled, size_t index);
+void ResizeArray(T_StructForhWaitForChildren *tstructToBeHandled, size_t newCapacity);
+void RemoveQueueFromTheArrayOfQueues(T_StructForhWaitForChildren *tstructToBeHandled, size_t index);
 
 //Thread's method that sends data from the queue
 DWORD WINAPI Propagate(LPVOID lpParam)
@@ -73,11 +73,20 @@ DWORD WINAPI Propagate(LPVOID lpParam)
 		if (tarray->queue->GetCount() > 0)
 		{
 			T_StructForData retVal = tarray->queue->Dequeue();
+			if(retVal.data == (char*)0xcdcdcdcd)
+			{
+				printf("bug");
+			}
+			if(retVal.data == (char*)0x00000000)
+			{
+				printf("OPET BUG!");
+			}
+
 			char *dataToSend = (char*)malloc(sizeof(char)*retVal.size + 4);
 			*(int*)dataToSend = retVal.size;
 			memcpy((char*)(dataToSend + sizeof(int)), retVal.data, retVal.size);
 			SendData(retVal.size + 4, dataToSend, tarray->socket); 
-			Sleep(1); //TODO: SKLONI OVO!!!!!
+			//Sleep(1); 
 		}
 		else
 		{
@@ -88,9 +97,9 @@ DWORD WINAPI Propagate(LPVOID lpParam)
 	return 0;
 }
 
-DWORD WINAPI receiveChilds(LPVOID lpParam)
+DWORD WINAPI ReceiveChildren(LPVOID lpParam)
 {
-	T_StructForhWaitForChilds *tstruct = (T_StructForhWaitForChilds*)lpParam;
+	T_StructForhWaitForChildren *tstruct = (T_StructForhWaitForChildren*)lpParam;
 	tstruct->ShutdownThread = false;
 	int iResult = 0;
 	//NONBLOCKING MODE
@@ -109,16 +118,16 @@ DWORD WINAPI receiveChilds(LPVOID lpParam)
 			return 0;
 		}
 		SOCKET someSocket2 = tstruct->agr->GetListenSocket();
-		setNonblockingParams(someSocket2, true);
+		SetNonblockingParams(someSocket2, true);
 		//dodaj u niz
 		AddToArrayOfQueues(accept(someSocket2, NULL, NULL), tstruct);
 	}
 	return 0;
 }
 
-DWORD WINAPI receiveDataFromParrent(LPVOID lpParam)
+DWORD WINAPI ReceiveDataFromParrent(LPVOID lpParam)
 {
-	T_StructForhWaitForChilds *tstruct = (T_StructForhWaitForChilds*)lpParam;
+	T_StructForhWaitForChildren *tstruct = (T_StructForhWaitForChildren*)lpParam;
 	tstruct->ShutdownThread = false;
 	int iResult = 0;
 	printf("Aggregator now receiving data...\n");
@@ -138,10 +147,10 @@ DWORD WINAPI receiveDataFromParrent(LPVOID lpParam)
 		}
 
 		char *lengthChar = (char*)malloc(sizeof(char) * 4);
-		lengthChar = receive(4, tstruct->agr->GetConnectSocket());
+		lengthChar = Receive(4, tstruct->agr->GetConnectSocket());
 		int length = *(int*)lengthChar;
 		char *data = (char*)malloc(sizeof(char)*length);
-		data = receive(length, tstruct->agr->GetConnectSocket());
+		data = Receive(length, tstruct->agr->GetConnectSocket());
 
 		T_StructForData *dataForQueue = new T_StructForData();
 		dataForQueue->size = length;
@@ -156,7 +165,7 @@ DWORD WINAPI receiveDataFromParrent(LPVOID lpParam)
 	} while (1);
 }
 
-bool setNonblockingParams(SOCKET socket, bool isReceiving)
+bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 {
 	while(true)
 	{
@@ -199,15 +208,14 @@ bool setNonblockingParams(SOCKET socket, bool isReceiving)
 		//NONBLOCKING SETTINGS END-----------------------------------------------------------
 }
 
-char* receive(int length, SOCKET socket)
+char* Receive(int length, SOCKET socket)
 {
 	int received = 0;
 	char* data = (char*)malloc(sizeof(char)*length);
 	while(received<length)
 	{
-		setNonblockingParams(socket, true);
+		SetNonblockingParams(socket, true);
 		received += recv(socket, data + received, length - received, 0);
-		//TODO: hendlanje gresaka
 		if (received == SOCKET_ERROR)
 		{
 			printf("Receive failed with error: %d\n", WSAGetLastError());
@@ -223,8 +231,8 @@ int SendData(int size, char* data, SOCKET socket)
 	int iResult = 0;
 	while (iResult < size)
 	{
-		setNonblockingParams(socket, false);
-		iResult += send(socket, data + iResult, size, 0);
+		SetNonblockingParams(socket, false);
+		iResult += send(socket, data + iResult, size - iResult, 0);
 		if (iResult == SOCKET_ERROR)
 		{
 			printf("send failed with error: %d\n", WSAGetLastError());
@@ -236,7 +244,7 @@ int SendData(int size, char* data, SOCKET socket)
 	return iResult;
 }
 
-void AddToArrayOfQueues(SOCKET socket, structForhWaitForChilds *tstruct)
+void AddToArrayOfQueues(SOCKET socket, T_StructForhWaitForChildren *tstruct)
 {
 	EnterCriticalSection(&(tstruct->criticalSection));
 
@@ -255,7 +263,7 @@ void AddToArrayOfQueues(SOCKET socket, structForhWaitForChilds *tstruct)
 	LeaveCriticalSection(&(tstruct->criticalSection));
 }
 
-void RemoveQueueFromTheArrayOfQueues(structForhWaitForChilds *tstructToBeHandled, size_t index)
+void RemoveQueueFromTheArrayOfQueues(T_StructForhWaitForChildren *tstructToBeHandled, size_t index)
 {
 	if (index < tstructToBeHandled->count && index >= 0)
 	{
@@ -267,7 +275,7 @@ void RemoveQueueFromTheArrayOfQueues(structForhWaitForChilds *tstructToBeHandled
 }
 
 // Not thread safe! If used, it should be called inside a critical section.
-void ResizeArray(structForhWaitForChilds *tstructToBeHandled, size_t newCapacity)
+void ResizeArray(T_StructForhWaitForChildren *tstructToBeHandled, size_t newCapacity)
 {
 	if (newCapacity > INITIAL_SIZE)
 	{
@@ -295,15 +303,15 @@ int _tmain(int argc, _TCHAR* argv[])
 	char *portForChilds = (char*)malloc(sizeof(char) * 6);
 	printf("please enter the port you want to listen: \n");
 	scanf("%s", portForChilds);	
-	T_StructForhWaitForChilds *tstruct = new T_StructForhWaitForChilds();
+	T_StructForhWaitForChildren *tstruct = new T_StructForhWaitForChildren();
 	tstruct->capacity = INITIAL_SIZE;
 	tstruct->queues = (T_ArrayOfQueues*)malloc(sizeof(T_ArrayOfQueues)*INITIAL_SIZE);
 	tstruct->agr = new Aggregator(port, ipAddress, portForChilds);
 	InitializeCriticalSection(&(tstruct->criticalSection));
 	DWORD itForChildsID;
 	DWORD ithReceiveDataFromParrent;
-	HANDLE hWaitForChilds = CreateThread(NULL, 0, &receiveChilds, tstruct, 0, &itForChildsID);
-	HANDLE hReceiveDataFromParrent = CreateThread(NULL, 0, &receiveDataFromParrent, tstruct, 0, &ithReceiveDataFromParrent);
+	HANDLE hWaitForChildren = CreateThread(NULL, 0, &ReceiveChildren, tstruct, 0, &itForChildsID);
+	HANDLE hReceiveDataFromParrent = CreateThread(NULL, 0, &ReceiveDataFromParrent, tstruct, 0, &ithReceiveDataFromParrent);
 	int liI = getchar();
 	liI = getchar();
 	
@@ -315,10 +323,10 @@ int _tmain(int argc, _TCHAR* argv[])
 		CloseHandle(tstruct->queues[i].threadHandle);
 	}
 
-	CloseHandle(hWaitForChilds);
+	CloseHandle(hWaitForChildren);
 	free(ipAddress);
 	free(portForChilds);
-	WaitForSingleObject(hWaitForChilds, INFINITE);		
+	WaitForSingleObject(hWaitForChildren, INFINITE);		
 	tstruct->agr->~Aggregator();
 	WSACleanup();
 	delete(tstruct);

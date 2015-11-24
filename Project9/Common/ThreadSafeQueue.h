@@ -22,7 +22,7 @@ public:
 			capacity = newCapacity;
 		}
 
-		data = new T[capacity];
+		data = static_cast< T* >( calloc(size, sizeof(T)) );
 		for (int i = 0; i < newCapacity; i++)
 		{
 			Enqueue(dataToCopy[i]);
@@ -34,7 +34,7 @@ public:
 		tail = -1;
 		InitializeCriticalSection(&criticalSection);
 		count = 0;
-		data = new T[initialSize];
+		data = static_cast< T* >( calloc(initialSize, sizeof(T)) );
 		capacity = initialSize;
 	}
 	ThreadSafeQueue()
@@ -43,7 +43,7 @@ public:
 		tail = -1;
 		InitializeCriticalSection(&criticalSection);
 		capacity = INITIAL_SIZE;
-		data = new T[INITIAL_SIZE];
+		data = static_cast< T* >( calloc(INITIAL_SIZE, sizeof(T)) );
 		count = 0;
 	}
 
@@ -51,32 +51,30 @@ public:
 	{
 		DeleteCriticalSection(&criticalSection);
 
-		delete(data);
+		free(data);
 	}
 
 	int GetCount()
 	{
-		//TODO: When there is 2 aggrs access violation occurs
 		EnterCriticalSection(&criticalSection);
 		int retVal = count;
 		LeaveCriticalSection(&criticalSection);
 		return retVal;
-		
 	}
 
 	void Enqueue(T newData)
 	{
 		EnterCriticalSection(&criticalSection);
 
-		tail = (tail + 1) % capacity;
-
-		if (tail == head && count > 0)
+		if (count + 1 >= capacity)
 		{
 			Resize(capacity * 2);
 		}
 
+		tail = (tail + 1) % capacity;
 		data[tail] = newData;
 		count++;
+
 		LeaveCriticalSection(&criticalSection);
 	}
 
@@ -84,40 +82,18 @@ public:
 	{
 		EnterCriticalSection(&criticalSection);
 		T retVal;
-		/*if (count == 0)
-		{
-			return QUEUE_IS_EMPTY;
-		}*/
+
 		if (count > 0)
 		{
 			retVal = data[head];
-			if (count > 1)
-			{
-				head = (head + 1) % capacity;
-			}
-
-			if (head < tail)
-			{
-				if (count - 1 <= capacity / 4)
-				{
-					Resize(capacity / 2);
-				}
-			}
-			else if (head > tail)
-			{
-				if (count - 1 <= capacity / 4) // PROVERI OVO!!!!!
-				{
-					Resize(capacity / 2);
-				}
-			}
-			else 
-			{
-				if (count - 1 <= capacity / 4)
-				{
-					Resize(capacity / 2);
-				}
-			}
+			head = (head + 1) % capacity;
 			count--;
+			
+			if (count <= capacity / 4) // PROVERI OVO!!!!!
+			{
+				Resize(capacity / 2);
+			}
+			
 		}
 		LeaveCriticalSection(&criticalSection);
 		return retVal;
@@ -136,9 +112,14 @@ protected:
 	{
 		if (newCapacity >= INITIAL_SIZE)
 		{
-			T *newData = new T[newCapacity];
+			int brojIf = 0;
+			char *temp = (char*)malloc(5);
+			memset(temp,1,5);
+			free(temp);
+			T *newData =  static_cast< T* >( calloc(newCapacity,sizeof(T)) );
 			if (head > tail)
 			{
+				brojIf = 1;
 				for (int i = head; i < capacity; i++)
 				{
 					newData[i - head] = data[i];
@@ -148,21 +129,22 @@ protected:
 				{
 					newData[capacity - head + i] = data[i];
 				}
-
-				// Postavljamo tail na stari capacity koji je zapravo broj elemenata. proveri ovo!
-				tail = count;
 			}
 			else if (head < tail)
 			{
+				brojIf = 2;
 				for (int i = head; i <= tail; i++)
 				{
+					if (*(char*)(data + i - head) == 0)
+					{
+						printf("lala\n");
+					}
 					newData[i - head] = data[i];
 				}
-
-				tail = count;
 			}
 			else
 			{
+				brojIf = 3;
 				int dataIndex = head;
 				newData[0] = data[dataIndex];
 				for (int i = 1; i < count; i++)
@@ -170,13 +152,19 @@ protected:
 					dataIndex = (dataIndex + 1) % capacity;
 					newData[i] = data[dataIndex];
 				}
-				tail = count;
 			}
 			capacity = newCapacity;
 			head = 0;
-
-			delete(data);
+			tail = count - 1;
+			free(data);
 			data = newData;
+			/*for (int i = 0; i < count; i++)
+			{
+				if (*(char*)(data + i) == 0)
+				{
+					printf("Cought you! brojIf = %d", brojIf);
+				}
+			}*/
 		}
 	}
 

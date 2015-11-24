@@ -7,20 +7,20 @@ typedef struct structForData
 	char *data;
 }T_StructForData;
 
-typedef struct structForhWaitForChilds
+typedef struct structForhWaitForChildren
 {
 	DataDestination *dd;
 	SOCKET *socket;
 	bool ShutdownThread;
 	ThreadSafeQueue<T_StructForData> *queue;
-}T_StructForhWaitForChilds;
+}T_StructForhWaitForChildren;
 
-bool setNonblockingParams(SOCKET socket, bool isReceiving);
-char* receive(int length, SOCKET socket);
+bool SetNonblockingParams(SOCKET socket, bool isReceiving);
+char* Receive(int length, SOCKET socket);
 
-DWORD WINAPI receiveDataFromParrent(LPVOID lpParam)
+DWORD WINAPI ReceiveDataFromParrent(LPVOID lpParam)
 {
-	T_StructForhWaitForChilds *tstruct = (T_StructForhWaitForChilds*)lpParam;
+	T_StructForhWaitForChildren *tstruct = (T_StructForhWaitForChildren*)lpParam;
 	tstruct->ShutdownThread = false;
 	int iResult = 0;
 	printf("DataDestination now receiving data...\n");
@@ -41,26 +41,26 @@ DWORD WINAPI receiveDataFromParrent(LPVOID lpParam)
 		}
 
 		char *lengthChar = (char*)malloc(sizeof(char) * 4);
-		lengthChar = receive(4, tstruct->dd->GetConnectSocket());
+		lengthChar = Receive(4, tstruct->dd->GetConnectSocket());
 		int length = *(int*)lengthChar;
 		char *data = (char*)malloc(sizeof(char)*length);
-		data = receive(length, tstruct->dd->GetConnectSocket());
+		data = Receive(length, tstruct->dd->GetConnectSocket());
 
 		T_StructForData *dataForQueue = new T_StructForData();
 		dataForQueue->size = length;
 		dataForQueue->data = data;
 		//TODO: UBACI DEO ZA PUNJENJE REDOVA!
-		printf("Some data received:\n");
+		/*printf("Some data received:\n");
 		for(int i = 0; i< length; i++)
 		{
 			printf("%c",data[i]);
 		}
-		printf("\n");
-		tstruct->queue->Enqueue(*dataForQueue);
+		printf("\n");*/
+		//tstruct->queue->Enqueue(*dataForQueue);
 	} while (1);
 }
 
-bool setNonblockingParams(SOCKET socket, bool isReceiving)
+bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 {
 	while(true)
 	{
@@ -103,13 +103,13 @@ bool setNonblockingParams(SOCKET socket, bool isReceiving)
 		//NONBLOCKING SETTINGS END-----------------------------------------------------------
 }
 
-char* receive(int length, SOCKET socket)
+char* Receive(int length, SOCKET socket)
 {
 	int received = 0;
 	char* data = (char*)malloc(sizeof(char)*length);
 	while(received<length)
 	{
-		setNonblockingParams(socket,true);
+		SetNonblockingParams(socket,true);
 		received += recv(socket, data + received, length - received, 0);
 	}
 	return data;
@@ -124,11 +124,11 @@ int _tmain(int argc, _TCHAR* argv[])
 	scanf("%s", ipAddress);
 	printf("Pleas enter the port for connecting to server: \n");
 	scanf("%hu", &port);
-	T_StructForhWaitForChilds *tstruct = new T_StructForhWaitForChilds();
+	T_StructForhWaitForChildren *tstruct = new T_StructForhWaitForChildren();
 	tstruct->queue = new ThreadSafeQueue<T_StructForData>();
 	tstruct->dd = new DataDestination(port, ipAddress);
 	DWORD ithReceiveDataFromParrent;
-	HANDLE hReceiveDataFromParrent = CreateThread(NULL, 0, &receiveDataFromParrent, tstruct, 0, &ithReceiveDataFromParrent);
+	HANDLE hReceiveDataFromParrent = CreateThread(NULL, 0, &ReceiveDataFromParrent, tstruct, 0, &ithReceiveDataFromParrent);
 	int liI = getchar();
 	liI = getchar();
 

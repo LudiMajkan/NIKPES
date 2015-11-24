@@ -14,20 +14,20 @@
 	bool isAlive;
 }T_ArrayOfQueues;*/
 
-typedef struct structForhWaitForChilds
+typedef struct structForhWaitForChildren
 {
 	DataSource *ds;
 	SOCKET *sockets;
 	int count;
 	bool ShutdownThread;
-}T_StructForhWaitForChilds;
+}T_StructForhWaitForChildren;
 
-bool setNonblockingParams(SOCKET socket, bool isReceiving);
-void AddToArrayOfSockets(SOCKET socket, structForhWaitForChilds *tstruct);
+bool SetNonblockingParams(SOCKET socket, bool isReceiving);
+void AddToArrayOfSockets(SOCKET socket, T_StructForhWaitForChildren *tstruct);
 
-DWORD WINAPI receiveChilds(LPVOID lpParam)
+DWORD WINAPI ReceiveChildren(LPVOID lpParam)
 {
-	T_StructForhWaitForChilds *tstruct = (T_StructForhWaitForChilds*)lpParam;
+	T_StructForhWaitForChildren *tstruct = (T_StructForhWaitForChildren*)lpParam;
 	tstruct->ShutdownThread = false;
 	int iResult = 0;
 	//NONBLOCKING MODE
@@ -46,16 +46,16 @@ DWORD WINAPI receiveChilds(LPVOID lpParam)
 			return 0;
 		}
 		SOCKET someSocket2 = tstruct->ds->GetListenSocket();
-		setNonblockingParams(someSocket2, true);
+		SetNonblockingParams(someSocket2, true);
 		//dodaj u niz
 		AddToArrayOfSockets(accept(someSocket2, NULL, NULL), tstruct);
 	}
 	return 0;
 }
 
-DWORD WINAPI sendDataToChilds(LPVOID lpParam)
+DWORD WINAPI SendDataToChildren(LPVOID lpParam)
 {
-	T_StructForhWaitForChilds *tstruct = (T_StructForhWaitForChilds*)lpParam;
+	T_StructForhWaitForChildren *tstruct = (T_StructForhWaitForChildren*)lpParam;
 	tstruct->ShutdownThread = false;
 	int iResult = 0;
 	//NONBLOCKING MODE
@@ -73,7 +73,7 @@ DWORD WINAPI sendDataToChilds(LPVOID lpParam)
 	}
 }
 
-bool setNonblockingParams(SOCKET socket, bool isReceiving)
+bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 {
 	while(true)
 	{
@@ -121,7 +121,7 @@ int SendData(int size, char* data, SOCKET socket)
 	int iResult = 0;
 	while(iResult < size)
 	{
-		setNonblockingParams(socket, false);
+		SetNonblockingParams(socket, false);
 		iResult += send(socket, data + iResult, size, 0);
 		if(iResult == SOCKET_ERROR)
 		{
@@ -134,7 +134,7 @@ int SendData(int size, char* data, SOCKET socket)
 	return iResult;
 }
 
-void AddToArrayOfSockets(SOCKET socket, structForhWaitForChilds *tstruct)
+void AddToArrayOfSockets(SOCKET socket, T_StructForhWaitForChildren *tstruct)
 {
 	int count = tstruct->count;
 	tstruct->sockets[count] = socket;
@@ -149,14 +149,14 @@ int _tmain(int argc, _TCHAR* argv[])
 	scanf("%s", port);
 	DWORD itForChildsID;
 	DWORD itSendDataToChilds;
-	T_StructForhWaitForChilds  *tstruct = new T_StructForhWaitForChilds();
+	T_StructForhWaitForChildren  *tstruct = new T_StructForhWaitForChildren();
 	tstruct->count = 0;
 	tstruct->ShutdownThread = false;
 	tstruct->ds = new DataSource(port);
 	tstruct->sockets = (SOCKET*)malloc(sizeof(SOCKET)*10);
 	//Inicijalizuj niz redova!
-	HANDLE hWaitForChilds = CreateThread(NULL, 0, &receiveChilds, tstruct, 0, &itForChildsID);
-	HANDLE hSendDataToChilds = CreateThread(NULL, 0, &sendDataToChilds, tstruct, 0, &itSendDataToChilds);
+	HANDLE hWaitForChilds = CreateThread(NULL, 0, &ReceiveChildren, tstruct, 0, &itForChildsID);
+	HANDLE hSendDataToChilds = CreateThread(NULL, 0, &SendDataToChildren, tstruct, 0, &itSendDataToChilds);
 	char liI = getchar();
 	char *messageToSend = (char*)malloc(sizeof(char)*10);
 	for(int i = 0; i<10; i++)
