@@ -1,3 +1,18 @@
+/**
+* @file DataSource.h
+*
+* @brief Contains socket for getting children and sockets for sending data to child nodes
+*
+*/
+
+/**
+* @class DataSource
+* @brief Contains socket for getting children and sockets for sending data to child nodes
+*
+* This class initializes connection needed for child nodes to connect and sends data to child nodes
+*
+*/
+
 #pragma once
 
 #include "stdafx.h"
@@ -8,34 +23,28 @@
 class DataSource
 {
 public:
+
+	/**
+	* @brief Constructor of DataSource
+	*/
 	DataSource(char* port);
+
+	/**
+	* @brief Destructor of DataSource
+	*/
 	~DataSource();
+
+	/**
+	* @brief Get access to listenSocket
+	*
+	*
+	* @return Returns listenSocket
+	*
+	*/
 	SOCKET GetListenSocket()
 	{
 		return listenSocket;
 	}
-	SOCKET GetAcceptedSocket()
-	{
-		return acceptedSocket;
-	}
-	void SetAcceptedSocket(SOCKET acceptedSocketNew)
-	{
-		acceptedSocket = acceptedSocketNew;
-	}
-	char* GetRecvbuf()
-	{
-		return recvbuf;
-	}
-	addrinfo *GetResultingAddress()
-	{
-		return resultingAddress;
-	}
-
-	addrinfo GetHints()
-	{
-		return hints;
-	}
-
 
 protected:
 	// Socket used for listening for new clients 
@@ -49,7 +58,24 @@ protected:
 	addrinfo *resultingAddress;
 	addrinfo hints;
 
+	/**
+	* @brief Initializes connection to parent node
+	*
+	* @param *ipAddress - pointer on ip address of server
+	*
+	* @param port - port of server application
+	*
+	* @return return value true if initialization is successfuly done,
+	*	else returns false;
+	*/
 	bool InitializeServer(char *port);
+
+	/**
+	* @brief Initializes windows sockets
+	*
+	* @return return value true if initialization is successfuly done,
+	*	else returns false;
+	*/
 	bool InitializeWindowsSockets();
 
 };

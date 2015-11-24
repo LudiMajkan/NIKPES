@@ -1,3 +1,18 @@
+/**
+* @file DataDestination.h
+*
+* @brief Contains socket for getting children and socket for connecting to parrent
+*
+*/
+
+/**
+* @class DataDestination
+* @brief Contains socket for connecting to parrent.
+*
+* This class initializes connection needed to connect to parent node.
+*
+*/
+
 #pragma once
 #include "stdafx.h"
 
@@ -6,28 +21,44 @@
 class DataDestination
 {
 public:
+
+	/**
+	* @brief Constructor of DataDestination
+	*/
 	DataDestination(unsigned short port, char *ipAddress)
 	{
 		connectSocket = INVALID_SOCKET;
 		InitializeConnection(ipAddress, port);
 	}
+
+	/**
+	* @brief Destructor of DataDestination
+	*/
 	~DataDestination();
+
+	/**
+	* @brief Get access to connectSocket
+	*
+	*
+	* @return Returns connectSocket
+	*
+	*/
 	SOCKET GetConnectSocket()
 	{
 		return connectSocket;
 	}
-	int GetIResult()
-	{
-		return iResult;
-	}
+
+	/**
+	* @brief Get access to serverAddress
+	*
+	* @return Returns serverAddress
+	*
+	*/
 	sockaddr_in GetServerAddress()
 	{
 		return serverAddress;
 	}
-	char* GetRecvbuf()
-	{
-		return recvbuf;
-	}
+
 protected:
 	// socket used to communicate with server
 	SOCKET connectSocket;
@@ -38,7 +69,23 @@ protected:
 	// Buffer used for storing incoming data
 	char recvbuf[DEFAULT_BUFLEN];
 
-	bool InitializeServer(char *port);
+	/**
+	* @brief Initializes connection to parent node
+	*
+	* @param *ipAddress - pointer on ip address of server
+	*
+	* @param port - port of server application
+	*
+	* @return return value true if initialization is successfuly done,
+	*	else returns false;
+	*/
 	bool InitializeConnection(char* ipAddress, unsigned short port);
+
+	/**
+	* @brief Initializes windows sockets
+	*
+	* @return return value true if initialization is successfuly done,
+	*	else returns false;
+	*/
 	bool InitializeWindowsSockets();
 };

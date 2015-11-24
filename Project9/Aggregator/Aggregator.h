@@ -1,3 +1,18 @@
+/**
+* @file Propagator.h
+*
+* @brief Contains socket for getting children and socket for connecting to parrent
+*
+*/
+
+/**
+* @class Propagator
+* @brief Contains socket for getting children and socket for connecting to parrent.
+*
+* This class initializes connection needed for child nodes to connect and connection needed to connect to parent node.
+*
+*/
+
 #pragma once
 
 #include "stdafx.h"
@@ -7,6 +22,10 @@
 class Aggregator
 {
 public:
+
+	/**
+	* @brief Constructor of Aggregator
+	*/
 	Aggregator(unsigned short port, char *ipAddress, char *portForChilds)
 	{
 		connectSocket = INVALID_SOCKET;
@@ -17,48 +36,50 @@ public:
 		InitializeConnection(ipAddress, port);
 		InitializeServer(portForChilds);
 	}
+
+	/**
+	* @brief Destructor of Aggregator
+	*/
 	~Aggregator()
 	{
 		closesocket(connectSocket);
 		closesocket(acceptedSocket);
 		closesocket(listenSocket);
 	}
+
+	/**
+	* @brief Get access to connectSocket
+	*
+	*
+	* @return Returns connectSocket
+	*
+	*/
 	SOCKET GetConnectSocket()
 	{
 		return connectSocket;
 	}
-	int GetIResult()
-	{
-		return iResult;
-	}
+
+	/**
+	* @brief Get access to serverAddress
+	*
+	* @return Returns serverAddress
+	*
+	*/
 	sockaddr_in GetServerAddress()
 	{
 		return serverAddress;
 	}
+
+	/**
+	* @brief Get access to listenSocket
+	*
+	*
+	* @return Returns listenSocket
+	*
+	*/
 	SOCKET GetListenSocket()
 	{
 		return listenSocket;
-	}
-	SOCKET GetAcceptedSocket()
-	{
-		return acceptedSocket;
-	}
-	void SetAcceptedSocket(SOCKET acceptedSocketNew)
-	{
-		acceptedSocket = acceptedSocketNew;
-	}
-	char* GetRecvbuf()
-	{
-		return recvbuf;
-	}
-	addrinfo *GetResultingAddress()
-	{
-		return resultingAddress;
-	}
-
-	addrinfo GetHints()
-	{
-		return hints;
 	}
 protected:
 	// socket used to communicate with server
@@ -80,8 +101,34 @@ protected:
 	addrinfo *resultingAddress;
 	addrinfo hints;
 
+	/**
+	* @brief Initializes server for accepting children
+	*
+	* @param *port - pointer on port that is used for listenSocket
+	*
+	* @return return value true if initialization is successfuly done,
+	*	else returns false;
+	*/
 	bool InitializeServer(char *port);
+
+	/**
+	* @brief Initializes connection to parent node
+	*
+	* @param *ipAddress - pointer on ip address of server
+	*
+	* @param port - port of server application
+	*
+	* @return return value true if initialization is successfuly done,
+	*	else returns false;
+	*/
 	bool InitializeConnection(char* ipAddress, unsigned short port);
+
+	/**
+	* @brief Initializes windows sockets
+	*
+	* @return return value true if initialization is successfuly done,
+	*	else returns false;
+	*/
 	bool InitializeWindowsSockets();
 	
 };

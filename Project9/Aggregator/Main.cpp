@@ -5,6 +5,8 @@
 #define INITIAL_SIZE 4
 #define CLOSE_HANDLE_MACRO (CloseHandle(a));
 
+int dataReceived = 0;
+
 typedef struct structForData
 {
 	int size;
@@ -85,7 +87,12 @@ DWORD WINAPI Propagate(LPVOID lpParam)
 			char *dataToSend = (char*)malloc(sizeof(char)*retVal.size + 4);
 			*(int*)dataToSend = retVal.size;
 			memcpy((char*)(dataToSend + sizeof(int)), retVal.data, retVal.size);
-			SendData(retVal.size + 4, dataToSend, tarray->socket); 
+			int sendingError = SendData(retVal.size + 4, dataToSend, tarray->socket); 
+			if (sendingError == -1)
+			{
+				tarray->queue = 0x00000000;
+				return 0;
+			}
 			//Sleep(1); 
 		}
 		else
@@ -130,6 +137,7 @@ DWORD WINAPI ReceiveDataFromParrent(LPVOID lpParam)
 	T_StructForhWaitForChildren *tstruct = (T_StructForhWaitForChildren*)lpParam;
 	tstruct->ShutdownThread = false;
 	int iResult = 0;
+	
 	printf("Aggregator now receiving data...\n");
 	//NONBLOCKING MODE
 	unsigned long int nonBlockingMode = 1;
@@ -155,13 +163,16 @@ DWORD WINAPI ReceiveDataFromParrent(LPVOID lpParam)
 		T_StructForData *dataForQueue = new T_StructForData();
 		dataForQueue->size = length;
 		dataForQueue->data = data;
-		//TODO: UBACI DEO ZA PUNJENJE REDOVA!
 
-		
+
 		for(int i = 0; i < tstruct->count; i++)
 		{
-			tstruct->queues[i].queue->Enqueue(*dataForQueue);
+			if (tstruct->queues[i].queue != 0x00000000)
+			{
+				tstruct->queues[i].queue->Enqueue(*dataForQueue);
+			}
 		}
+		dataReceived++;
 	} while (1);
 }
 
@@ -198,6 +209,7 @@ bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 		}
 		if(iResult==0)
 		{
+			printf("Data received: %d\n", dataReceived);
 			Sleep(500);
 		}
 		else
@@ -206,21 +218,26 @@ bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 		}
 	}
 		//NONBLOCKING SETTINGS END-----------------------------------------------------------
+	return true;
 }
 
 char* Receive(int length, SOCKET socket)
 {
 	int received = 0;
 	char* data = (char*)malloc(sizeof(char)*length);
+	bool socketCorrect = false;
 	while(received<length)
 	{
-		SetNonblockingParams(socket, true);
+		socketCorrect = SetNonblockingParams(socket, true);
+		if (!socketCorrect)
+		{
+			break;
+		}
 		received += recv(socket, data + received, length - received, 0);
 		if (received == SOCKET_ERROR)
 		{
 			printf("Receive failed with error: %d\n", WSAGetLastError());
 			closesocket(socket);
-			WSACleanup();
 		}
 	}
 	return data;
@@ -229,16 +246,20 @@ char* Receive(int length, SOCKET socket)
 int SendData(int size, char* data, SOCKET socket)
 {
 	int iResult = 0;
+	bool socketCorrect = false;
 	while (iResult < size)
 	{
-		SetNonblockingParams(socket, false);
+		socketCorrect = SetNonblockingParams(socket, false);
+		if (!socketCorrect)
+		{
+			break;
+		}
 		iResult += send(socket, data + iResult, size - iResult, 0);
 		if (iResult == SOCKET_ERROR)
 		{
 			printf("send failed with error: %d\n", WSAGetLastError());
 			closesocket(socket);
-			WSACleanup();
-			return 1;
+			return iResult;
 		}
 	}
 	return iResult;
@@ -265,6 +286,7 @@ void AddToArrayOfQueues(SOCKET socket, T_StructForhWaitForChildren *tstruct)
 
 void RemoveQueueFromTheArrayOfQueues(T_StructForhWaitForChildren *tstructToBeHandled, size_t index)
 {
+	EnterCriticalSection(&(tstructToBeHandled->criticalSection));
 	if (index < tstructToBeHandled->count && index >= 0)
 	{
 		delete(&(tstructToBeHandled->queues[index]));
@@ -272,6 +294,7 @@ void RemoveQueueFromTheArrayOfQueues(T_StructForhWaitForChildren *tstructToBeHan
 		tstructToBeHandled->queues[index] = tstructToBeHandled->queues[tstructToBeHandled->count];
 		tstructToBeHandled->count--;
 	}
+	LeaveCriticalSection(&(tstructToBeHandled->criticalSection));
 }
 
 // Not thread safe! If used, it should be called inside a critical section.

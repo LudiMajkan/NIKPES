@@ -1,5 +1,20 @@
 #pragma once
 
+/**
+* @file ThreadSafeQueue.h
+*
+* @brief Reprezents thread safe circular buffer
+*
+*/
+
+/**
+* @class ThreadSafeQueue
+* @brief Reprezents thread safe circular buffer
+*
+* This class enables usage of thread safe circular buffer by enqueue and dequeue
+*
+*/
+
 #include "stdafx.h"
 
 #define INITIAL_SIZE 4
@@ -9,7 +24,10 @@ template <class T>
 class ThreadSafeQueue
 {
 public:
-	//Not needed
+
+	/**
+	* @brief Constructor of ThreadSafeQueue
+	*/
 	ThreadSafeQueue(T* dataToCopy, int size)
 	{
 		head = 0;
@@ -28,6 +46,10 @@ public:
 			Enqueue(dataToCopy[i]);
 		}
 	}
+
+	/**
+	* @brief Constructor of ThreadSafeQueue
+	*/
 	ThreadSafeQueue(int initialSize)
 	{
 		head = 0;
@@ -37,6 +59,10 @@ public:
 		data = static_cast< T* >( calloc(initialSize, sizeof(T)) );
 		capacity = initialSize;
 	}
+
+	/**
+	* @brief Constructor of ThreadSafeQueue
+	*/
 	ThreadSafeQueue()
 	{
 		head = 0;
@@ -47,6 +73,9 @@ public:
 		count = 0;
 	}
 
+	/**
+	* @brief Destructor of ThreadSafeQueue
+	*/
 	~ThreadSafeQueue()
 	{
 		DeleteCriticalSection(&criticalSection);
@@ -54,6 +83,14 @@ public:
 		free(data);
 	}
 
+
+	/**
+	* @brief Allows access to number of elements in circular buffer
+	*
+	*
+	* @return Returns count
+	*
+	*/
 	int GetCount()
 	{
 		EnterCriticalSection(&criticalSection);
@@ -62,6 +99,12 @@ public:
 		return retVal;
 	}
 
+	/**
+	* @brief Adds an element to circular buffer on tail
+	*
+	*@param *newData - represents new data that will be stored in circular buffer
+	*
+	*/
 	void Enqueue(T newData)
 	{
 		EnterCriticalSection(&criticalSection);
@@ -78,6 +121,12 @@ public:
 		LeaveCriticalSection(&criticalSection);
 	}
 
+	/**
+	* @brief Returns an element from circular buffer that is on the head
+	*
+	* @return Returns T (template class)
+	*
+	*/
 	T Dequeue()
 	{
 		EnterCriticalSection(&criticalSection);
@@ -89,7 +138,7 @@ public:
 			head = (head + 1) % capacity;
 			count--;
 			
-			if (count <= capacity / 4) // PROVERI OVO!!!!!
+			if (count <= capacity / 4)
 			{
 				Resize(capacity / 2);
 			}
@@ -108,18 +157,19 @@ protected:
 
 	CRITICAL_SECTION criticalSection;
 
+	/**
+	* @brief Resizes the circular buffer
+	*
+	*@param newCapacity - New capacity of the circular buffer
+	*
+	*/
 	void Resize(int newCapacity)
 	{
 		if (newCapacity >= INITIAL_SIZE)
 		{
-			int brojIf = 0;
-			char *temp = (char*)malloc(5);
-			memset(temp,1,5);
-			free(temp);
 			T *newData =  static_cast< T* >( calloc(newCapacity,sizeof(T)) );
 			if (head > tail)
 			{
-				brojIf = 1;
 				for (int i = head; i < capacity; i++)
 				{
 					newData[i - head] = data[i];
@@ -132,19 +182,13 @@ protected:
 			}
 			else if (head < tail)
 			{
-				brojIf = 2;
 				for (int i = head; i <= tail; i++)
 				{
-					if (*(char*)(data + i - head) == 0)
-					{
-						printf("lala\n");
-					}
 					newData[i - head] = data[i];
 				}
 			}
 			else
 			{
-				brojIf = 3;
 				int dataIndex = head;
 				newData[0] = data[dataIndex];
 				for (int i = 1; i < count; i++)
@@ -158,13 +202,6 @@ protected:
 			tail = count - 1;
 			free(data);
 			data = newData;
-			/*for (int i = 0; i < count; i++)
-			{
-				if (*(char*)(data + i) == 0)
-				{
-					printf("Cought you! brojIf = %d", brojIf);
-				}
-			}*/
 		}
 	}
 

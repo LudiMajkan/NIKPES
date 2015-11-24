@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "DataDestination.h"
 
+int dataReceived = 0;
+
 typedef struct structForData
 {
 	int size;
@@ -56,7 +58,8 @@ DWORD WINAPI ReceiveDataFromParrent(LPVOID lpParam)
 			printf("%c",data[i]);
 		}
 		printf("\n");*/
-		//tstruct->queue->Enqueue(*dataForQueue);
+		tstruct->queue->Enqueue(*dataForQueue);
+		dataReceived++;
 	} while (1);
 }
 
@@ -93,6 +96,7 @@ bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 		}
 		if(iResult==0)
 		{
+			printf("Data received: %d\n", dataReceived);
 			Sleep(500);
 		}
 		else
@@ -101,15 +105,21 @@ bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 		}
 	}
 		//NONBLOCKING SETTINGS END-----------------------------------------------------------
+	return true;
 }
 
 char* Receive(int length, SOCKET socket)
 {
 	int received = 0;
 	char* data = (char*)malloc(sizeof(char)*length);
+	bool socketCorrect = false;
 	while(received<length)
 	{
-		SetNonblockingParams(socket,true);
+		socketCorrect = SetNonblockingParams(socket, true);
+		if (!socketCorrect)
+		{
+			break;
+		}
 		received += recv(socket, data + received, length - received, 0);
 	}
 	return data;
@@ -134,7 +144,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	tstruct->ShutdownThread = true;
 	CloseHandle(hReceiveDataFromParrent);
-	closesocket(tstruct->dd->GetConnectSocket());
+	tstruct->dd->~DataDestination();
 	WSACleanup();
 	return 0;
 }

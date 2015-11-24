@@ -3,16 +3,6 @@
 #include "DataSource.h"
 
 #define SLEEP_TIME_INTERVAL 20
-#define TYPE_OF_DATA "char"
-
-/*typedef struct arrayOfQueues
-{
-	ThreadSafeQueue<char> *queue;
-	HANDLE threadHandle;
-	DWORD threadID;
-	SOCKET socket;
-	bool isAlive;
-}T_ArrayOfQueues;*/
 
 typedef struct structForhWaitForChildren
 {
@@ -38,7 +28,7 @@ DWORD WINAPI ReceiveChildren(LPVOID lpParam)
 		printf("ioctlsocket failed with error: %ld\n", WSAGetLastError());
 		return 1;
 	}
-	
+	bool socketCorrect = false;
 	while (true)
 	{
 		if (tstruct->ShutdownThread)
@@ -46,7 +36,11 @@ DWORD WINAPI ReceiveChildren(LPVOID lpParam)
 			return 0;
 		}
 		SOCKET someSocket2 = tstruct->ds->GetListenSocket();
-		SetNonblockingParams(someSocket2, true);
+		socketCorrect = SetNonblockingParams(someSocket2, true);
+		/*if (!socketCorrect)
+		{
+			break;
+		}*/
 		//dodaj u niz
 		AddToArrayOfSockets(accept(someSocket2, NULL, NULL), tstruct);
 	}
@@ -114,6 +108,7 @@ bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 		}
 	}
 		//NONBLOCKING SETTINGS END-----------------------------------------------------------
+	return true;
 }
 
 int SendData(int size, char* data, SOCKET socket)
@@ -121,13 +116,17 @@ int SendData(int size, char* data, SOCKET socket)
 	int iResult = 0;
 	while(iResult < size)
 	{
-		SetNonblockingParams(socket, false);
+		bool socketCorrect = SetNonblockingParams(socket, false);
+		if (!socketCorrect)
+		{
+			break;
+		}
 		iResult += send(socket, data + iResult, size, 0);
 		if(iResult == SOCKET_ERROR)
 		{
 			printf("send failed with error: %d\n", WSAGetLastError());
 			closesocket(socket);
-			WSACleanup();
+			//WSACleanup();
 			return 1;
 		}
 	}
@@ -185,6 +184,19 @@ int _tmain(int argc, _TCHAR* argv[])
 			{
 				iResult = SendData(sizeof(int), (char*)&sizeOfMessage, tstruct->sockets[j]);
 				iResult = SendData(sizeof(char) * 10, messageToSend, tstruct->sockets[j]);
+				if (iResult == 0)
+				{
+					//closesocket(tstruct->sockets[j]);
+					for (int k = j; k < tstruct->count; k++)
+					{
+						if (k + 1 < tstruct->count)
+						{
+							tstruct->sockets[k] = tstruct->sockets[k + 1];
+						}
+					}
+					j--;
+					tstruct->count--;
+				}
 			}
 		}
 		printf("Sending done");
@@ -192,11 +204,11 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 
 	liI = getchar();
-
+	tstruct->ShutdownThread = true;
 	CloseHandle(hWaitForChilds);
 
 	WaitForSingleObject(hWaitForChilds, INFINITE);
-	closesocket(tstruct->ds->GetAcceptedSocket());
+	tstruct->ds->~DataSource();
 	WSACleanup();
 	delete(tstruct);
 	return 0;

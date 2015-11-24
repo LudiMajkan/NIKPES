@@ -18,6 +18,7 @@ bool DataDestination::InitializeConnection(char* ipAddress, unsigned short port)
 		SOCK_STREAM,
 		IPPROTO_TCP);
 
+
 	if (connectSocket == INVALID_SOCKET)
 	{
 		printf("socket failed with error: %ld\n", WSAGetLastError());
