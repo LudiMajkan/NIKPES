@@ -127,14 +127,14 @@ public:
 	* @return Returns T (template class)
 	*
 	*/
-	T Dequeue()
+	T* Dequeue()
 	{
 		EnterCriticalSection(&criticalSection);
-		T retVal;
+		T *retVal = static_cast<T*>(malloc(sizeof(T)));
 
 		if (count > 0)
 		{
-			retVal = data[head];
+			*retVal = data[head];
 			head = (head + 1) % capacity;
 			count--;
 			

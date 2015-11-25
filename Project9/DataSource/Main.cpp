@@ -1,8 +1,9 @@
 
 #include "stdafx.h"
 #include "DataSource.h"
+#include <time.h>
 
-#define SLEEP_TIME_INTERVAL 20
+#define SLEEP_TIME_INTERVAL 1
 
 typedef struct structForhWaitForChildren
 {
@@ -47,26 +48,6 @@ DWORD WINAPI ReceiveChildren(LPVOID lpParam)
 	return 0;
 }
 
-DWORD WINAPI SendDataToChildren(LPVOID lpParam)
-{
-	T_StructForhWaitForChildren *tstruct = (T_StructForhWaitForChildren*)lpParam;
-	tstruct->ShutdownThread = false;
-	int iResult = 0;
-	//NONBLOCKING MODE
-	unsigned long int nonBlockingMode = 1;
-	iResult = ioctlsocket(tstruct->ds->GetListenSocket(), FIONBIO, &nonBlockingMode);
-	//TODO: Implementation of sending (Maybe is not needed)?
-	while(true)
-	{
-		if(tstruct->ShutdownThread)
-		{
-			return 0;
-		}
-		//setNonblockingParams(someSocket2, false);
-		//for(int i=0; i<BROJ U NIZU; i++)
-	}
-}
-
 bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 {
 	while(true)
@@ -100,7 +81,7 @@ bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 		}
 		if(iResult==0)
 		{
-			Sleep(500);
+			Sleep(SLEEP_TIME_INTERVAL);
 		}
 		else
 		{
@@ -147,22 +128,26 @@ int _tmain(int argc, _TCHAR* argv[])
 	printf("Pleas enter the port: \n");
 	scanf("%s", port);
 	DWORD itForChildsID;
-	DWORD itSendDataToChilds;
 	T_StructForhWaitForChildren  *tstruct = new T_StructForhWaitForChildren();
 	tstruct->count = 0;
 	tstruct->ShutdownThread = false;
 	tstruct->ds = new DataSource(port);
 	tstruct->sockets = (SOCKET*)malloc(sizeof(SOCKET)*10);
 	//Inicijalizuj niz redova!
-	HANDLE hWaitForChilds = CreateThread(NULL, 0, &ReceiveChildren, tstruct, 0, &itForChildsID);
-	HANDLE hSendDataToChilds = CreateThread(NULL, 0, &SendDataToChildren, tstruct, 0, &itSendDataToChilds);
+	HANDLE hWaitForChildren = CreateThread(NULL, 0, &ReceiveChildren, tstruct, 0, &itForChildsID);
 	char liI = getchar();
-	char *messageToSend = (char*)malloc(sizeof(char)*10);
+	
+	
+	/*char *messageToSend = (char*)malloc(sizeof(char)*10);
 	for(int i = 0; i<10; i++)
 	{
 			messageToSend[i] = 0x41;
-	}
+	}*/
 
+	char *messageToSend = (char*)malloc(sizeof(char)*1024);
+	memset(messageToSend,'A', 1024);
+	char *endMessage = (char*)malloc(sizeof(char)*1024);
+	memset(endMessage, 'E', 1024);
 	/*for(int i = 0; i<100000; i++)
 	{
 		//printf("trying to send data to aggregator\n");
@@ -175,18 +160,22 @@ int _tmain(int argc, _TCHAR* argv[])
 	liI = getchar();
 	while(liI!='a')
 	{
-		for(int i = 0; i<100000; i++)
+		time_t rawtime = time(0);
+		struct tm *timeinfo;
+		time ( &rawtime );
+		timeinfo = localtime ( &rawtime );
+		printf(asctime(timeinfo));
+		int iResult = 0;
+		int sizeOfMessage = 1024;
+		for(int i = 0; i<102399; i++)
 		{
-			//printf("trying to send data to aggregator\n");
-			int sizeOfMessage = 10;
-			int iResult = 0;
+			iResult = 0;
 			for(int j = 0; j< tstruct->count; j++)
 			{
 				iResult = SendData(sizeof(int), (char*)&sizeOfMessage, tstruct->sockets[j]);
-				iResult = SendData(sizeof(char) * 10, messageToSend, tstruct->sockets[j]);
+				iResult = SendData(sizeof(char) * 1024, messageToSend, tstruct->sockets[j]);
 				if (iResult == 0)
 				{
-					//closesocket(tstruct->sockets[j]);
 					for (int k = j; k < tstruct->count; k++)
 					{
 						if (k + 1 < tstruct->count)
@@ -199,15 +188,19 @@ int _tmain(int argc, _TCHAR* argv[])
 				}
 			}
 		}
-		printf("Sending done");
+		iResult = 0;
+		iResult = SendData(sizeof(int), (char*)&sizeOfMessage, tstruct->sockets[0]);
+		iResult = SendData(sizeof(char) * 1024, endMessage, tstruct->sockets[0]);
+		printf("Sending done\n");
 		liI = getchar(); 
 	}
 
 	liI = getchar();
 	tstruct->ShutdownThread = true;
-	CloseHandle(hWaitForChilds);
-
-	WaitForSingleObject(hWaitForChilds, INFINITE);
+	Sleep(1);
+	CloseHandle(hWaitForChildren);
+	free(messageToSend);
+	free(endMessage);
 	tstruct->ds->~DataSource();
 	WSACleanup();
 	delete(tstruct);

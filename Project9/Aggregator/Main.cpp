@@ -74,25 +74,33 @@ DWORD WINAPI Propagate(LPVOID lpParam)
 
 		if (tarray->queue->GetCount() > 0)
 		{
-			T_StructForData retVal = tarray->queue->Dequeue();
-			if(retVal.data == (char*)0xcdcdcdcd)
+			T_StructForData *retVal = tarray->queue->Dequeue();
+			if(retVal->data == (char*)0xcdcdcdcd)
 			{
 				printf("bug");
 			}
-			if(retVal.data == (char*)0x00000000)
+			if(retVal->data == (char*)0x00000000)
 			{
 				printf("OPET BUG!");
 			}
 
-			char *dataToSend = (char*)malloc(sizeof(char)*retVal.size + 4);
-			*(int*)dataToSend = retVal.size;
-			memcpy((char*)(dataToSend + sizeof(int)), retVal.data, retVal.size);
-			int sendingError = SendData(retVal.size + 4, dataToSend, tarray->socket); 
+			char *dataToSend = (char*)malloc(sizeof(char)*retVal->size + 4);
+			if(dataToSend == NULL)
+			{
+				printf("Upade, johohohoho!");
+			}
+			*(int*)dataToSend = retVal->size;
+			memcpy((char*)(dataToSend + sizeof(int)), retVal->data, retVal->size);
+			int sendingError = SendData(retVal->size + 4, dataToSend, tarray->socket); 
 			if (sendingError == -1)
 			{
 				tarray->queue = 0x00000000;
 				return 0;
 			}
+			free(dataToSend);
+			free(retVal->data);
+			free(retVal);
+			//free(&retVal);
 			//Sleep(1); 
 		}
 		else
@@ -154,25 +162,30 @@ DWORD WINAPI ReceiveDataFromParrent(LPVOID lpParam)
 			return 0;
 		}
 
-		char *lengthChar = (char*)malloc(sizeof(char) * 4);
-		lengthChar = Receive(4, tstruct->agr->GetConnectSocket());
-		int length = *(int*)lengthChar;
-		char *data = (char*)malloc(sizeof(char)*length);
-		data = Receive(length, tstruct->agr->GetConnectSocket());
-
-		T_StructForData *dataForQueue = new T_StructForData();
-		dataForQueue->size = length;
-		dataForQueue->data = data;
-
-
-		for(int i = 0; i < tstruct->count; i++)
+		char *lengthChar = Receive(4, tstruct->agr->GetConnectSocket());
+		if(tstruct->count > 0)
 		{
-			if (tstruct->queues[i].queue != 0x00000000)
+			int length = *(int*)lengthChar;
+			char *data = Receive(length, tstruct->agr->GetConnectSocket());
+
+			T_StructForData *dataForQueue = new T_StructForData();
+			dataForQueue->size = length;
+			dataForQueue->data = data;
+
+
+			for(int i = 0; i < tstruct->count; i++)
 			{
-				tstruct->queues[i].queue->Enqueue(*dataForQueue);
+				if (tstruct->queues[i].queue != 0x00000000)
+				{
+					tstruct->queues[i].queue->Enqueue(*dataForQueue);
+					dataReceived++;
+				}
 			}
+			//free(data);
+			free(dataForQueue);
 		}
-		dataReceived++;
+		free(lengthChar);
+		
 	} while (1);
 }
 
@@ -209,8 +222,11 @@ bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 		}
 		if(iResult==0)
 		{
-			printf("Data received: %d\n", dataReceived);
-			Sleep(500);
+			if(dataReceived % 1000 >= 950)
+			{
+				printf("Data received: %d\n", dataReceived);
+			}
+			Sleep(1);
 		}
 		else
 		{

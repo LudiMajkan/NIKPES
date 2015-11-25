@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "DataDestination.h"
+#include <time.h>
 
 int dataReceived = 0;
 
@@ -42,23 +43,28 @@ DWORD WINAPI ReceiveDataFromParrent(LPVOID lpParam)
 			return 0;
 		}
 
-		char *lengthChar = (char*)malloc(sizeof(char) * 4);
-		lengthChar = Receive(4, tstruct->dd->GetConnectSocket());
+		char *lengthChar = Receive(4, tstruct->dd->GetConnectSocket());
+		
 		int length = *(int*)lengthChar;
-		char *data = (char*)malloc(sizeof(char)*length);
-		data = Receive(length, tstruct->dd->GetConnectSocket());
+		char *data = Receive(length, tstruct->dd->GetConnectSocket());
 
-		T_StructForData *dataForQueue = new T_StructForData();
-		dataForQueue->size = length;
-		dataForQueue->data = data;
-		//TODO: UBACI DEO ZA PUNJENJE REDOVA!
-		/*printf("Some data received:\n");
-		for(int i = 0; i< length; i++)
+		if(data[0] == 'E')
 		{
-			printf("%c",data[i]);
+			time_t rawtime = time(0);
+			struct tm *timeinfo;
+			time ( &rawtime );
+			timeinfo = localtime ( &rawtime );
+			printf(asctime(timeinfo));
+			//free(timeinfo);
 		}
-		printf("\n");*/
-		tstruct->queue->Enqueue(*dataForQueue);
+
+		free(data);
+		free(lengthChar);
+		//T_StructForData *dataForQueue = new T_StructForData();
+		//dataForQueue->size = length;
+		//dataForQueue->data = data;
+
+		//tstruct->queue->Enqueue(*dataForQueue);
 		dataReceived++;
 	} while (1);
 }
@@ -96,8 +102,11 @@ bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 		}
 		if(iResult==0)
 		{
-			printf("Data received: %d\n", dataReceived);
-			Sleep(500);
+			if(dataReceived % 1000 >= 950)
+			{
+				printf("Data received: %d\n", dataReceived);
+			}
+			Sleep(1);
 		}
 		else
 		{
@@ -145,6 +154,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	tstruct->ShutdownThread = true;
 	CloseHandle(hReceiveDataFromParrent);
 	tstruct->dd->~DataDestination();
+	free(tstruct->queue);
 	WSACleanup();
 	return 0;
 }
