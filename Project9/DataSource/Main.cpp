@@ -1,20 +1,9 @@
-
 #include "stdafx.h"
 #include "DataSource.h"
 #include <time.h>
+#include "main.h"
+#include "../CommonLib/SharedFunctions.h"
 
-#define SLEEP_TIME_INTERVAL 1
-
-typedef struct structForhWaitForChildren
-{
-	DataSource *ds;
-	SOCKET *sockets;
-	int count;
-	bool ShutdownThread;
-}T_StructForhWaitForChildren;
-
-bool SetNonblockingParams(SOCKET socket, bool isReceiving);
-void AddToArrayOfSockets(SOCKET socket, T_StructForhWaitForChildren *tstruct);
 
 DWORD WINAPI ReceiveChildren(LPVOID lpParam)
 {
@@ -48,7 +37,7 @@ DWORD WINAPI ReceiveChildren(LPVOID lpParam)
 	return 0;
 }
 
-bool SetNonblockingParams(SOCKET socket, bool isReceiving)
+/*bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 {
 	while(true)
 	{
@@ -67,11 +56,11 @@ bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 		timeVal.tv_usec = 0;
 		if(isReceiving)
 		{
-			iResult = select(0 /* ignored */, &set, NULL, NULL, &timeVal);
+			iResult = select(0 /* ignored /, &set, NULL, NULL, &timeVal);
 		}
 		else
 		{
-			iResult = select(0 /* ignored */, NULL, &set, NULL, &timeVal);
+			iResult = select(0 /* ignored /, NULL, &set, NULL, &timeVal);
 		}
 		// lets check if there was an error during select
 		if (iResult == SOCKET_ERROR)
@@ -90,7 +79,7 @@ bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 	}
 		//NONBLOCKING SETTINGS END-----------------------------------------------------------
 	return true;
-}
+}*/
 
 int SendData(int size, char* data, SOCKET socket)
 {

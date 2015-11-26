@@ -1,63 +1,9 @@
 #include "stdafx.h"
 #include "Aggregator.h"
+#include "main.h"
+#include "../CommonLib/SharedFunctions.h"
 
-#define SLEEP_TIME_INTERVAL 20
-#define INITIAL_SIZE 4
-#define CLOSE_HANDLE_MACRO (CloseHandle(a));
-
-int dataReceived = 0;
-
-typedef struct structForData
-{
-	int size;
-	char *data;
-}T_StructForData;
-
-typedef struct arrayOfQueues
-{
-	// A pointer to the ThreadSafeQueue object.
-	ThreadSafeQueue<T_StructForData> *queue;
-
-	// A HANDLE fot the consumer thread.
-	HANDLE threadHandle;
-
-	// A consumer thread ID
-	DWORD threadID;
-
-	// A socket used to connect to the client 
-	SOCKET socket;
-
-	// A flag that shows if the consumer thread should get terminated.
-	bool isAlive;
-}T_ArrayOfQueues;
-
-typedef struct structForhWaitForChildren
-{
-	// Pointer to Aggregator that initializes connecion and server for children.
-	Aggregator *agr;
-
-	// The capacity of the "queues" array.
-	int capacity;
-	
-	// The number of queues in the "queues" array.
-	int count;
-
-	// A dynamic array of queues with data.
-	T_ArrayOfQueues *queues;
-
-	// A flag that shows if the thread should get terminated.
-	bool ShutdownThread;
-
-	// A CRITICAL_SECTION object used for synchronization of threads.
-	CRITICAL_SECTION criticalSection;
-}T_StructForhWaitForChildren;
-
-bool SetNonblockingParams(SOCKET socket, bool isReceiving);
-char* Receive(int length, SOCKET socket);
-void AddToArrayOfQueues(SOCKET socket, T_StructForhWaitForChildren *tstruct);
-int SendData(int size, char* data, SOCKET socket);
-void ResizeArray(T_StructForhWaitForChildren *tstructToBeHandled, size_t newCapacity);
-void RemoveQueueFromTheArrayOfQueues(T_StructForhWaitForChildren *tstructToBeHandled, size_t index);
+extern int dataReceived;
 
 //Thread's method that sends data from the queue
 DWORD WINAPI Propagate(LPVOID lpParam)
@@ -77,17 +23,17 @@ DWORD WINAPI Propagate(LPVOID lpParam)
 			T_StructForData *retVal = tarray->queue->Dequeue();
 			if(retVal->data == (char*)0xcdcdcdcd)
 			{
-				printf("bug");
+				printf("1bug");
 			}
 			if(retVal->data == (char*)0x00000000)
 			{
-				printf("OPET BUG!");
+				printf("2BUG!");
 			}
 
 			char *dataToSend = (char*)malloc(sizeof(char)*retVal->size + 4);
 			if(dataToSend == NULL)
 			{
-				printf("Upade, johohohoho!");
+				printf("3bug");
 			}
 			*(int*)dataToSend = retVal->size;
 			memcpy((char*)(dataToSend + sizeof(int)), retVal->data, retVal->size);
@@ -95,6 +41,9 @@ DWORD WINAPI Propagate(LPVOID lpParam)
 			if (sendingError == -1)
 			{
 				tarray->queue = 0x00000000;
+				free(dataToSend);
+				free(retVal->data);
+				free(retVal);
 				return 0;
 			}
 			free(dataToSend);
@@ -169,27 +118,36 @@ DWORD WINAPI ReceiveDataFromParrent(LPVOID lpParam)
 			char *data = Receive(length, tstruct->agr->GetConnectSocket());
 
 			T_StructForData *dataForQueue = new T_StructForData();
-			dataForQueue->size = length;
-			dataForQueue->data = data;
+			
 
 
 			for(int i = 0; i < tstruct->count; i++)
 			{
-				if (tstruct->queues[i].queue != 0x00000000)
+				if (tstruct->queues[i].queue != NULL)
 				{
+					char *copyData = CreateDeepCopy(data, length);
+					dataForQueue->size = length;
+					dataForQueue->data = copyData;
 					tstruct->queues[i].queue->Enqueue(*dataForQueue);
 					dataReceived++;
 				}
 			}
-			//free(data);
+			free(data);
 			free(dataForQueue);
 		}
 		free(lengthChar);
 		
-	} while (1);
+	} while (true);
 }
 
-bool SetNonblockingParams(SOCKET socket, bool isReceiving)
+char* CreateDeepCopy(char* data,int length)
+{
+	char *newCopy = (char *)malloc(sizeof(char) * length);
+	memcpy(newCopy, data, length);
+	return newCopy;
+}
+
+/*bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 {
 	while(true)
 	{
@@ -208,11 +166,11 @@ bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 		timeVal.tv_usec = 0;
 		if(isReceiving)
 		{
-			iResult = select(0 /* ignored */, &set, NULL, NULL, &timeVal);
+			iResult = select(0 /* ignored /, &set, NULL, NULL, &timeVal);
 		}
 		else
 		{
-			iResult = select(0 /* ignored */, NULL, &set, NULL, &timeVal);
+			iResult = select(0 /* ignored /, NULL, &set, NULL, &timeVal);
 		}
 		// lets check if there was an error during select
 		if (iResult == SOCKET_ERROR)
@@ -257,7 +215,7 @@ char* Receive(int length, SOCKET socket)
 		}
 	}
 	return data;
-}
+}*/
 
 int SendData(int size, char* data, SOCKET socket)
 {

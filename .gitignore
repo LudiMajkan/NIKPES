@@ -38,11 +38,13 @@ Project9/*/*.vcxproj
 Project9/Debug/
 Project9/Aggregator/Debug/
 Project9/Common/Debug/
+Project9/CommonLib/Debug/
 Project9/DataDestination/Debug/
 Project9/DataSource/Debug/
 Project9/ipch/
 Project9/x64/
 Project9/Aggregator/x64/
+Project9/CommonLib/x64/
 Project9/Common/x64/
 Project9/DataDestination/x64/
 Project9/DataSource/x64/

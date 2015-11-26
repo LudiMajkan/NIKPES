@@ -15,7 +15,6 @@
 *
 */
 
-#include "stdafx.h"
 
 #define INITIAL_SIZE 4
 #define QUEUE_IS_EMPTY -2147483648

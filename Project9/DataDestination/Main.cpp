@@ -1,25 +1,10 @@
 #include "stdafx.h"
 #include "DataDestination.h"
 #include <time.h>
+#include "main.h"
+#include "../CommonLib/SharedFunctions.h"
 
-int dataReceived = 0;
-
-typedef struct structForData
-{
-	int size;
-	char *data;
-}T_StructForData;
-
-typedef struct structForhWaitForChildren
-{
-	DataDestination *dd;
-	SOCKET *socket;
-	bool ShutdownThread;
-	ThreadSafeQueue<T_StructForData> *queue;
-}T_StructForhWaitForChildren;
-
-bool SetNonblockingParams(SOCKET socket, bool isReceiving);
-char* Receive(int length, SOCKET socket);
+extern int dataReceived;
 
 DWORD WINAPI ReceiveDataFromParrent(LPVOID lpParam)
 {
@@ -69,7 +54,7 @@ DWORD WINAPI ReceiveDataFromParrent(LPVOID lpParam)
 	} while (1);
 }
 
-bool SetNonblockingParams(SOCKET socket, bool isReceiving)
+/*bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 {
 	while(true)
 	{
@@ -88,11 +73,11 @@ bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 		timeVal.tv_usec = 0;
 		if(isReceiving)
 		{
-			iResult = select(0 /* ignored */, &set, NULL, NULL, &timeVal);
+			iResult = select(0 /* ignored /, &set, NULL, NULL, &timeVal);
 		}
 		else
 		{
-			iResult = select(0 /* ignored */, NULL, &set, NULL, &timeVal);
+			iResult = select(0 /* ignored /, NULL, &set, NULL, &timeVal);
 		}
 		// lets check if there was an error during select
 		if (iResult == SOCKET_ERROR)
@@ -132,7 +117,7 @@ char* Receive(int length, SOCKET socket)
 		received += recv(socket, data + received, length - received, 0);
 	}
 	return data;
-}
+}*/
 
 int _tmain(int argc, _TCHAR* argv[])
 {

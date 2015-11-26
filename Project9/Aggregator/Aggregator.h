@@ -16,9 +16,7 @@
 #pragma once
 
 #include "stdafx.h"
-
 #define DEFAULT_BUFLEN 512
-
 class Aggregator
 {
 public:
