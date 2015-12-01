@@ -61,9 +61,9 @@ protected:
 	/**
 	* @brief Initializes connection to parent node
 	*
-	* @param *ipAddress - pointer on ip address of server
+	* @param *ipAddress - Pointer on ip address of server
 	*
-	* @param port - port of server application
+	* @param port - Port of server application
 	*
 	* @return return value true if initialization is successfuly done,
 	*	else returns false;

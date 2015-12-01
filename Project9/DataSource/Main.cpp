@@ -27,80 +27,9 @@ DWORD WINAPI ReceiveChildren(LPVOID lpParam)
 		}
 		SOCKET someSocket2 = tstruct->ds->GetListenSocket();
 		socketCorrect = SetNonblockingParams(someSocket2, true);
-		/*if (!socketCorrect)
-		{
-			break;
-		}*/
-		//dodaj u niz
 		AddToArrayOfSockets(accept(someSocket2, NULL, NULL), tstruct);
 	}
 	return 0;
-}
-
-/*bool SetNonblockingParams(SOCKET socket, bool isReceiving)
-{
-	while(true)
-	{
-		int iResult = 0;
-		// Initialize select parameters
-		FD_SET set;
-		timeval timeVal;
-
-		FD_ZERO(&set);
-		// Add socket we will wait to read from
-		FD_SET(socket, &set);
-
-		// Set timeouts to zero since we want select to return
-		// instantaneously
-		timeVal.tv_sec = 0;
-		timeVal.tv_usec = 0;
-		if(isReceiving)
-		{
-			iResult = select(0 /* ignored /, &set, NULL, NULL, &timeVal);
-		}
-		else
-		{
-			iResult = select(0 /* ignored /, NULL, &set, NULL, &timeVal);
-		}
-		// lets check if there was an error during select
-		if (iResult == SOCKET_ERROR)
-		{
-			fprintf(stderr, "select failed with error: %ld\n", WSAGetLastError());
-			return false;
-		}
-		if(iResult==0)
-		{
-			Sleep(SLEEP_TIME_INTERVAL);
-		}
-		else
-		{
-			break;
-		}
-	}
-		//NONBLOCKING SETTINGS END-----------------------------------------------------------
-	return true;
-}*/
-
-int SendData(int size, char* data, SOCKET socket)
-{
-	int iResult = 0;
-	while(iResult < size)
-	{
-		bool socketCorrect = SetNonblockingParams(socket, false);
-		if (!socketCorrect)
-		{
-			break;
-		}
-		iResult += send(socket, data + iResult, size, 0);
-		if(iResult == SOCKET_ERROR)
-		{
-			printf("send failed with error: %d\n", WSAGetLastError());
-			closesocket(socket);
-			//WSACleanup();
-			return 1;
-		}
-	}
-	return iResult;
 }
 
 void AddToArrayOfSockets(SOCKET socket, T_StructForhWaitForChildren *tstruct)
@@ -122,7 +51,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	tstruct->ShutdownThread = false;
 	tstruct->ds = new DataSource(port);
 	tstruct->sockets = (SOCKET*)malloc(sizeof(SOCKET)*10);
-	//Inicijalizuj niz redova!
 	HANDLE hWaitForChildren = CreateThread(NULL, 0, &ReceiveChildren, tstruct, 0, &itForChildsID);
 	char liI = getchar();
 	

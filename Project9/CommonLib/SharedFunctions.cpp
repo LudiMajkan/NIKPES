@@ -66,3 +66,25 @@ bool SetNonblockingParams(SOCKET socket, bool isReceiving)
 		//NONBLOCKING SETTINGS END-----------------------------------------------------------
 	return true;
 }
+
+int SendData(int size, char* data, SOCKET socket)
+{
+	int iResult = 0;
+	bool socketCorrect = false;
+	while (iResult < size)
+	{
+		socketCorrect = SetNonblockingParams(socket, false);
+		if (!socketCorrect)
+		{
+			break;
+		}
+		iResult += send(socket, data + iResult, size - iResult, 0);
+		if (iResult == SOCKET_ERROR)
+		{
+			printf("send failed with error: %d\n", WSAGetLastError());
+			closesocket(socket);
+			return iResult;
+		}
+	}
+	return iResult;
+}

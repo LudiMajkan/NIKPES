@@ -5,7 +5,10 @@
 
 extern int dataReceived;
 
-//Thread's method that sends data from the queue
+/**
+* @brief Thread's method that sends data from the queue
+*
+*/
 DWORD WINAPI Propagate(LPVOID lpParam)
 {
 	T_ArrayOfQueues *tarray = (T_ArrayOfQueues*)lpParam;
@@ -21,26 +24,13 @@ DWORD WINAPI Propagate(LPVOID lpParam)
 		if (tarray->queue->GetCount() > 0)
 		{
 			T_StructForData *retVal = tarray->queue->Dequeue();
-			if(retVal->data == (char*)0xcdcdcdcd)
-			{
-				printf("1bug");
-			}
-			if(retVal->data == (char*)0x00000000)
-			{
-				printf("2BUG!");
-			}
-
 			char *dataToSend = (char*)malloc(sizeof(char)*retVal->size + 4);
-			if(dataToSend == NULL)
-			{
-				printf("3bug");
-			}
 			*(int*)dataToSend = retVal->size;
 			memcpy((char*)(dataToSend + sizeof(int)), retVal->data, retVal->size);
 			int sendingError = SendData(retVal->size + 4, dataToSend, tarray->socket); 
 			if (sendingError == -1)
 			{
-				tarray->queue = 0x00000000;
+				tarray->queue = NULL;
 				free(dataToSend);
 				free(retVal->data);
 				free(retVal);
@@ -49,8 +39,6 @@ DWORD WINAPI Propagate(LPVOID lpParam)
 			free(dataToSend);
 			free(retVal->data);
 			free(retVal);
-			//free(&retVal);
-			//Sleep(1); 
 		}
 		else
 		{
@@ -61,6 +49,10 @@ DWORD WINAPI Propagate(LPVOID lpParam)
 	return 0;
 }
 
+/**
+* @brief Thread's function that accepts child nodes that connect to parrent
+*
+*/
 DWORD WINAPI ReceiveChildren(LPVOID lpParam)
 {
 	T_StructForhWaitForChildren *tstruct = (T_StructForhWaitForChildren*)lpParam;
@@ -83,12 +75,15 @@ DWORD WINAPI ReceiveChildren(LPVOID lpParam)
 		}
 		SOCKET someSocket2 = tstruct->agr->GetListenSocket();
 		SetNonblockingParams(someSocket2, true);
-		//dodaj u niz
 		AddToArrayOfQueues(accept(someSocket2, NULL, NULL), tstruct);
 	}
 	return 0;
 }
 
+/**
+* @brief Thread's function that receive data from parrent node
+*
+*/
 DWORD WINAPI ReceiveDataFromParrent(LPVOID lpParam)
 {
 	T_StructForhWaitForChildren *tstruct = (T_StructForhWaitForChildren*)lpParam;
@@ -140,105 +135,38 @@ DWORD WINAPI ReceiveDataFromParrent(LPVOID lpParam)
 	} while (true);
 }
 
+/**
+* @brief Creates deep copy 
+*
+* @param *data - pointer on data that will be copied
+*
+* @param length - length of data
+*
+* @return return new copy of data if data is not NULL,
+*		  else returns NULL
+*/
 char* CreateDeepCopy(char* data,int length)
 {
-	char *newCopy = (char *)malloc(sizeof(char) * length);
-	memcpy(newCopy, data, length);
-	return newCopy;
+	if (data != NULL)
+	{
+		char *newCopy = (char *)malloc(sizeof(char) * length);
+		memcpy(newCopy, data, length);
+		return newCopy;
+	}
+	else
+	{
+		return NULL;
+	}
 }
 
-/*bool SetNonblockingParams(SOCKET socket, bool isReceiving)
-{
-	while(true)
-	{
-		int iResult = 0;
-		// Initialize select parameters
-		FD_SET set;
-		timeval timeVal;
-
-		FD_ZERO(&set);
-		// Add socket we will wait to read from
-		FD_SET(socket, &set);
-
-		// Set timeouts to zero since we want select to return
-		// instantaneously
-		timeVal.tv_sec = 0;
-		timeVal.tv_usec = 0;
-		if(isReceiving)
-		{
-			iResult = select(0 /* ignored /, &set, NULL, NULL, &timeVal);
-		}
-		else
-		{
-			iResult = select(0 /* ignored /, NULL, &set, NULL, &timeVal);
-		}
-		// lets check if there was an error during select
-		if (iResult == SOCKET_ERROR)
-		{
-			fprintf(stderr, "select failed with error: %ld\n", WSAGetLastError());
-			return false;
-		}
-		if(iResult==0)
-		{
-			if(dataReceived % 1000 >= 950)
-			{
-				printf("Data received: %d\n", dataReceived);
-			}
-			Sleep(1);
-		}
-		else
-		{
-			break;
-		}
-	}
-		//NONBLOCKING SETTINGS END-----------------------------------------------------------
-	return true;
-}
-
-char* Receive(int length, SOCKET socket)
-{
-	int received = 0;
-	char* data = (char*)malloc(sizeof(char)*length);
-	bool socketCorrect = false;
-	while(received<length)
-	{
-		socketCorrect = SetNonblockingParams(socket, true);
-		if (!socketCorrect)
-		{
-			break;
-		}
-		received += recv(socket, data + received, length - received, 0);
-		if (received == SOCKET_ERROR)
-		{
-			printf("Receive failed with error: %d\n", WSAGetLastError());
-			closesocket(socket);
-		}
-	}
-	return data;
-}*/
-
-int SendData(int size, char* data, SOCKET socket)
-{
-	int iResult = 0;
-	bool socketCorrect = false;
-	while (iResult < size)
-	{
-		socketCorrect = SetNonblockingParams(socket, false);
-		if (!socketCorrect)
-		{
-			break;
-		}
-		iResult += send(socket, data + iResult, size - iResult, 0);
-		if (iResult == SOCKET_ERROR)
-		{
-			printf("send failed with error: %d\n", WSAGetLastError());
-			closesocket(socket);
-			return iResult;
-		}
-	}
-	return iResult;
-}
-
+/**
+* @brief Adds element to array
+*
+* @param socket - socket for connection to child node
+*
+* @param *tstruct - Pointer on structure that contains array
+*
+*/
 void AddToArrayOfQueues(SOCKET socket, T_StructForhWaitForChildren *tstruct)
 {
 	EnterCriticalSection(&(tstruct->criticalSection));
@@ -258,6 +186,14 @@ void AddToArrayOfQueues(SOCKET socket, T_StructForhWaitForChildren *tstruct)
 	LeaveCriticalSection(&(tstruct->criticalSection));
 }
 
+/**
+* @brief Removes element from array
+*
+* @param *tstructToBeHandled - Pointer on structure that contains array
+*
+* @param index - Index of element for deletion
+*
+*/
 void RemoveQueueFromTheArrayOfQueues(T_StructForhWaitForChildren *tstructToBeHandled, size_t index)
 {
 	EnterCriticalSection(&(tstructToBeHandled->criticalSection));
@@ -272,6 +208,15 @@ void RemoveQueueFromTheArrayOfQueues(T_StructForhWaitForChildren *tstructToBeHan
 }
 
 // Not thread safe! If used, it should be called inside a critical section.
+/**
+* @brief Resizes the array
+*
+* @param *tstructToBeHandled - Pointer on structure that contains array
+*
+* @param newCapacity - Specifies new capacity of array
+*
+* IMPORTANT: Not thread safe! If used, it should be called inside a critical section!
+*/
 void ResizeArray(T_StructForhWaitForChildren *tstructToBeHandled, size_t newCapacity)
 {
 	if (newCapacity > INITIAL_SIZE)
@@ -311,8 +256,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	HANDLE hReceiveDataFromParrent = CreateThread(NULL, 0, &ReceiveDataFromParrent, tstruct, 0, &ithReceiveDataFromParrent);
 	int liI = getchar();
 	liI = getchar();
-	
-	//Last changes in main
+
 	for(int i =0; i<tstruct->count; i++)
 	{
 		tstruct->queues[i].isAlive = false;
@@ -321,6 +265,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 
 	CloseHandle(hWaitForChildren);
+	CloseHandle(hReceiveDataFromParrent);
 	free(ipAddress);
 	free(portForChilds);
 	WaitForSingleObject(hWaitForChildren, INFINITE);		

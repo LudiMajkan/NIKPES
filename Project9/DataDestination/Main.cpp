@@ -6,6 +6,10 @@
 
 extern int dataReceived;
 
+/**
+* @brief Thread's function that receive data from parrent node
+*
+*/
 DWORD WINAPI ReceiveDataFromParrent(LPVOID lpParam)
 {
 	T_StructForhWaitForChildren *tstruct = (T_StructForhWaitForChildren*)lpParam;
@@ -33,91 +37,20 @@ DWORD WINAPI ReceiveDataFromParrent(LPVOID lpParam)
 		int length = *(int*)lengthChar;
 		char *data = Receive(length, tstruct->dd->GetConnectSocket());
 
-		if(data[0] == 'E')
+		if(data[0] == 'E' && data!=NULL)
 		{
 			time_t rawtime = time(0);
 			struct tm *timeinfo;
 			time ( &rawtime );
 			timeinfo = localtime ( &rawtime );
 			printf(asctime(timeinfo));
-			//free(timeinfo);
 		}
 
 		free(data);
 		free(lengthChar);
-		//T_StructForData *dataForQueue = new T_StructForData();
-		//dataForQueue->size = length;
-		//dataForQueue->data = data;
-
-		//tstruct->queue->Enqueue(*dataForQueue);
 		dataReceived++;
 	} while (1);
 }
-
-/*bool SetNonblockingParams(SOCKET socket, bool isReceiving)
-{
-	while(true)
-	{
-		int iResult = 0;
-		// Initialize select parameters
-		FD_SET set;
-		timeval timeVal;
-
-		FD_ZERO(&set);
-		// Add socket we will wait to read from
-		FD_SET(socket, &set);
-
-		// Set timeouts to zero since we want select to return
-		// instantaneously
-		timeVal.tv_sec = 0;
-		timeVal.tv_usec = 0;
-		if(isReceiving)
-		{
-			iResult = select(0 /* ignored /, &set, NULL, NULL, &timeVal);
-		}
-		else
-		{
-			iResult = select(0 /* ignored /, NULL, &set, NULL, &timeVal);
-		}
-		// lets check if there was an error during select
-		if (iResult == SOCKET_ERROR)
-		{
-			fprintf(stderr, "select failed with error: %ld\n", WSAGetLastError());
-			return false;
-		}
-		if(iResult==0)
-		{
-			if(dataReceived % 1000 >= 950)
-			{
-				printf("Data received: %d\n", dataReceived);
-			}
-			Sleep(1);
-		}
-		else
-		{
-			break;
-		}
-	}
-		//NONBLOCKING SETTINGS END-----------------------------------------------------------
-	return true;
-}
-
-char* Receive(int length, SOCKET socket)
-{
-	int received = 0;
-	char* data = (char*)malloc(sizeof(char)*length);
-	bool socketCorrect = false;
-	while(received<length)
-	{
-		socketCorrect = SetNonblockingParams(socket, true);
-		if (!socketCorrect)
-		{
-			break;
-		}
-		received += recv(socket, data + received, length - received, 0);
-	}
-	return data;
-}*/
 
 int _tmain(int argc, _TCHAR* argv[])
 {
